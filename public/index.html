@@ -1,0 +1,975 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+        <title>Sari-Sari Store Utang Tracker</title>
+        <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700&display=swap" rel="stylesheet">
+        <style>
+        :root{
+            --bg:#e9f1ee;
+            --card:#fff;
+            --ink:#12302b;
+            --mut:#5d7570;
+            --pri:#0b6e5f;
+            --onpri:#fff;
+            --yel:#ffc933;
+            --red:#c9302c;
+            --ok:#1d7a46;
+            --bd:#d3e0dc;
+            --tint:#f3f8f6;
+            color-scheme:light;
+            box-sizing:border-box;
+            padding-top:env(safe-area-inset-top,0px);
+            padding-bottom:env(safe-area-inset-bottom,0px);
+        }
+        @media(prefers-color-scheme:dark){
+            :root:not([data-theme="light"]){
+                --bg:#0e1b19;
+                --card:#172927;
+                --ink:#e8f3f0;
+                --mut:#93aca6;
+                --pri:#3cc2a8;
+                --onpri:#06231e;
+                --yel:#ffc933;
+                --red:#ff7b74;
+                --ok:#5fd18c;
+                --bd:#27403c;
+                --tint:#1c312e;
+                color-scheme:dark;
+            }
+        }
+        :root[data-theme="dark"]{
+            --bg:#0e1b19;
+            --card:#172927;
+            --ink:#e8f3f0;
+            --mut:#93aca6;
+            --pri:#3cc2a8;
+            --onpri:#06231e;
+            --yel:#ffc933;
+            --red:#ff7b74;
+            --ok:#5fd18c;
+            --bd:#27403c;
+            --tint:#1c312e;
+            color-scheme:dark;
+        }
+        *,*:before,*:after{
+            box-sizing:inherit;
+        }
+        html,body{
+            margin:0;
+            background:var(--bg);
+            color:var(--ink);
+            font:16px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif;
+        }
+        #app{
+            max-width:480px;
+            margin:0 auto;
+            min-height:100vh;
+            background:var(--bg);
+            padding-bottom:40px;
+        }
+        h1,h2,h3,.big{
+            font-family:"Baloo 2",system-ui,sans-serif;
+            margin:0;
+            line-height:1.15;
+        }
+        header{
+            display:flex;
+            align-items:center;
+            gap:8px;
+            padding:12px 14px;
+            background:var(--pri);
+            color:var(--onpri);
+        }
+        header h1{
+            font-size:20px;
+            font-weight:700;
+        }
+        .ib{
+            border:0;
+            background:rgba(255,255,255,.18);
+            color:inherit;
+            width:36px;
+            height:36px;
+            border-radius:50%;
+            font-size:18px;
+            cursor:pointer;
+        }
+        main{
+            padding:16px;
+        }
+        .auth{
+            padding:56px 8px 0;
+            text-align:center;
+        }
+        .auth label{
+            text-align:left;
+        }
+        .logo{
+            font-size:64px;
+        }
+        .auth h2{
+            font-size:28px;
+            margin:6px 0 28px;
+            color:var(--pri);
+        }
+        .hi{
+            font-size:28px;
+            margin:6px 0 14px;
+        }
+        .av{
+            width:96px;
+            height:96px;
+            border-radius:50%;
+            object-fit:cover;
+            border:3px solid var(--yel);
+            vertical-align:middle;
+        }
+        .total{
+            background:var(--pri);
+            color:var(--onpri);
+            border-radius:18px;
+            padding:18px 20px;
+            border-bottom:8px solid var(--yel);
+            margin-bottom:16px;
+        }
+        .total small{
+            display:block;
+            opacity:.85;
+        }
+        .total b{
+            display:block;
+            font:700 44px/1.1 "Baloo 2",sans-serif;
+        }
+        .total span{
+            opacity:.85;
+            font-size:14px;
+        }
+        .grid{
+            display:grid;
+            grid-template-columns:1fr 1fr;
+            gap:12px;
+        }
+        .tile{
+            background:var(--card);
+            border:2px solid var(--bd);
+            border-radius:16px;
+            padding:16px 8px;
+            font:600 16px "Baloo 2",sans-serif;
+            color:var(--ink);
+            cursor:pointer;
+            display:flex;
+            flex-direction:column;
+            gap:4px;
+            align-items:center;
+        }
+        .tile i{
+            font-style:normal;
+            font-size:28px;
+        }
+        .tile:hover,.row:hover{
+            border-color:var(--pri);
+        }
+        h3{
+            margin:22px 0 8px;
+            font-size:18px;
+        }
+        label{
+            display:block;
+            font-weight:600;
+            font-size:14px;
+            margin:0 0 14px;
+        }
+        input,select{
+            display:block;
+            width:100%;
+            margin-top:5px;
+            padding:12px;
+            font:inherit;
+            border:2px solid var(--bd);
+            border-radius:10px;
+            background:var(--card);
+            color:var(--ink);
+        }
+        input:focus,select:focus,button:focus-visible,a:focus-visible{
+            outline:3px solid var(--yel);
+            outline-offset:1px;
+            border-color:var(--pri);
+        }
+        .btn{
+            display:block;
+            width:100%;
+            text-align:center;
+            text-decoration:
+            none;padding:13px;
+            margin:8px 0;
+            border:0;
+            border-radius:12px;
+            background:var(--pri);
+            color:var(--onpri);
+            font:700 17px "Baloo 2",sans-serif;
+            cursor:pointer;
+        }
+        .btn.sec{
+            background:var(--card);
+            color:var(--pri);
+            border:2px solid var(--pri);
+        }
+        .btn.dng{
+            background:none;
+            color:var(--red);
+            border:2px solid var(--red);
+        }
+        .row{
+            display:flex;
+            justify-content:space-between;
+            align-items:center;
+            gap:8px;
+            width:100%;
+            text-align:left;
+            background:var(--card);
+            border:2px solid var(--bd);
+            border-radius:12px;
+            padding:13px 14px;
+            margin-bottom:8px;
+            font:inherit;
+            color:inherit;
+            cursor:pointer;
+        }
+        .row .r{
+            font-weight:700;
+            color:var(--red);
+        }
+        .who{
+            display:flex;
+            align-items:center;
+            gap:12px;
+            margin-bottom:14px;
+        }
+        .who>div:first-child{
+            font-size:40px;
+            line-height:1;
+        }
+        .who b{
+            font:700 22px "Baloo 2",sans-serif;
+        }
+        .who small{
+            color:var(--mut);
+            display:block;
+        }
+        .who .ib{margin-left:auto;
+            background:var(--tint);
+            color:var(--ink);
+        }
+        .cur{
+            background:var(--card);
+            border:2px solid var(--bd);
+            border-radius:16px;
+            padding:14px 16px;
+            display:flex;
+            justify-content:space-between;
+            align-items:center;
+            margin-bottom:10px;
+        }
+        .cur .big{
+            font-size:34px;
+            font-weight:700;
+        }
+        .pill{
+            padding:3px 12px;
+            border-radius:99px;
+            font-size:13px;
+            font-weight:700;
+        }
+        .pill.p{
+            background:var(--yel);
+            color:#3a2d00;
+        }
+        .pill.ok{
+            background:var(--ok);
+            color:#fff;
+        }
+        .pill.od{
+            background:var(--red);
+            color:#fff;
+        }
+        .due{
+            margin:0 0 10px;
+            color:var(--mut);
+        }
+        .due.od{
+            color:var(--red);
+        }
+        .alert{
+            background:var(--card);
+            border:2px solid var(--red);
+            border-radius:14px;
+            padding:10px 12px;
+            margin-bottom:14px;
+        }
+        .alert>b{
+            display:block;
+            color:var(--red);
+            margin-bottom:8px;
+        }
+        .alert .row{
+            margin-bottom:6px;
+        }
+        .pw{
+            position:relative;
+        }
+        .pw input{
+            padding-right:66px;
+        }
+        .eye{
+            position:absolute;
+            right:4px;
+            bottom:5px;
+            border:0;
+            background:none;
+            color:var(--pri);
+            font:700 14px system-ui,sans-serif;padding:8px;
+            cursor:pointer;
+        }
+        .sum{
+            background:var(--card);
+            border-radius:12px;
+            padding:4px 14px;
+            margin-bottom:10px;
+        }
+        .sum div{
+            display:flex;
+            justify-content:space-between;
+            padding:9px 0;
+            border-bottom:1px solid var(--bd);
+        }
+        .sum div:last-child{
+            border:0;
+        }
+        .tx{
+            display:flex;
+            justify-content:space-between;
+            gap:10px;
+            padding:10px 2px;
+            border-bottom:1px solid var(--bd);
+        }
+        .tx small{
+            color:var(--mut);
+            display:block;
+        }
+        .tx b.u{
+            color:var(--red);
+        }
+        .tx b.p{
+            color:var(--ok);
+        }
+        .empty{
+            color:var(--mut);
+            text-align:center;
+            padding:24px 0;
+        }
+        .chip{
+            border:2px solid var(--pri);
+            background:none;
+            color:var(--pri);
+            border-radius:99px;
+            padding:4px 12px;
+            font-weight:700;
+            cursor:pointer;
+            margin:-6px 0 14px;
+        }
+        .pr{
+            display:flex;
+            justify-content:
+            space-between;
+            padding:12px 0;
+            border-bottom:1px solid var(--bd);
+        }
+        .pr span{
+            color:var(--mut);
+        }
+        #modal{
+            position:fixed;
+            inset:0;
+            background:rgba(0,0,0,.55);
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            padding:24px;
+            z-index:20;
+        }
+        #modal[hidden]{
+            display:none;
+        }
+        .box{
+            background:var(--card);
+            border-radius:16px;
+            padding:20px;width:100%;
+            max-width:340px;
+            text-align:center;
+        }
+        .box p{
+            margin:0 0 8px;
+            font-weight:600;
+        }
+            .bt{
+                display:flex;
+                gap:8px;
+            }
+        .link{
+            text-align:center;
+            margin-top:18px;
+            font-size:14px;
+        }
+        .link a{
+            color:var(--pri);
+            font-weight:700;
+        }
+        @media(prefers-reduced-motion:no-preference){
+            .tile,.row,.btn{
+            transition:transform .08s}.tile:active,.row:active,.btn:active{transform:scale(.97)
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div id="app"></div><div id="modal" hidden></div>
+        <script>
+        const KEY='sari_utang_v1',
+            $=s=>document.querySelector(s),
+            g=id=>(($('#'+id)||{}).value||'').trim();
+
+        let db,S={
+            v:'splash',p:{}},
+            hist=[],
+            fails=0,
+            lockT=0;
+
+        try{
+            db=JSON.parse(localStorage.getItem(KEY))}
+            catch(e){}
+
+        db=db||{
+            owner:null,customers:[],txs:[]
+        };
+
+        const save=()=>{
+            try{localStorage.setItem(KEY,JSON.stringify(db))
+            }
+            catch(e){}
+        };
+
+        const esc=s=>String(s??'').replace(/[&<>"']/g,
+            c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])
+        );
+
+        const peso=n=>'₱'+Number(n).toLocaleString('en-PH',
+            {maximumFractionDigits:2});
+
+        const today=()=>{
+            const d=new Date();
+            return new Date(d-d.getTimezoneOffset()*6e4).toISOString().slice(0,10);
+        };
+        const fmt=d=>new Date(d+'T00:00').toLocaleDateString('en-PH',{month:'short',day:'numeric',year:'numeric'});
+
+        const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+
+        const cust=id=>db.customers.find(c=>c.id===id);
+
+        const sumT=(id,t)=>db.txs.filter(x=>x.cid===id&&x.type===t).reduce((s,x)=>s+x.amt,0);
+
+        const bal=id=>Math.round((sumT(id,'utang')-sumT(id,'pay'))*100)/100;
+
+        const pill=(b,c)=>b>0?(c&&isOver(c)?
+            '<span class="pill od">Overdue</span>':'<span class="pill p">Pending</span>'):'<span class="pill ok">No due</span>';
+
+        async function hash(p){
+            try{
+                const b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode('sari:'+p));
+                    return[...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('')
+                }
+                catch(e){
+                    return'x'+btoa(p)
+                    }
+                }
+        const fld=(id,l,v='',a='')=>
+            `<label>${l}<input id="${id}" value="${esc(v)}" ${a}></label>`;
+
+        const pinF=(id,l)=>
+            fld(id,l,'','type="password" inputmode="numeric" maxlength="4" autocomplete="off" placeholder="4 digits"').replace(/<input[^>]*>/,
+            m=>`<span class="pw">${m}<button type="button" class="eye" data-a="tp">Show</button></span>`);
+
+        function modal(msg,btns){
+            const m=$('#modal');
+            
+            m.innerHTML=`<div class="box"><p>${msg}</p><div class="bt">
+                ${btns.map((b,i)=>`<button class="btn${b.p===0?' sec':''}" data-i="${i}">${b.t}</button>`).join('')}</div></div>`;
+            
+            m.hidden=false;
+            
+            m.onclick=e=>{const b=e.target.closest('button');
+            if(!b)return;
+            
+            m.hidden=true;
+            const f=btns[b.dataset.i].f;f&&f()
+            }
+        }
+        const ok=(m,f)=>modal(m,[{t:'OK',f}]);
+
+        const nav=(v,p={})=>{hist.push(S);S={v,p};render();scrollTo(0,0)};
+
+        const rep=(v,p={})=>{S={v,p};render();scrollTo(0,0)};
+
+        const home=()=>{hist=[];S={v:'home',p:{}};render();checkDue()};
+
+        const fmtDT=d=>
+            new Date(d).toLocaleString('en-PH',{month:'short',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit'});
+
+        const defDue=()=>{
+            const d=new Date(Date.now()+7*864e5);
+            d.setHours(18,0,0,0);return new Date(d-d.getTimezoneOffset()*6e4).toISOString().slice(0,16)
+        };
+
+        const isOver=c=>bal(c.id)>0&&c.due&&new Date(c.due)<=new Date();
+
+        const toCust=id=>{
+            const i=hist.map(h=>h.v==='customer'&&h.p.id===id).lastIndexOf(true);
+            if(i<0)
+                return rep('customer',{id});
+            S=hist[i];S.p.edit=0;hist=hist.slice(0,i);render();scrollTo(0,0)
+        };
+
+        function checkDue(){
+            if(!db.owner||['splash','login','signup','forgot','resetpin'].includes(S.v)||!$('#modal').hidden)return;
+                const n=db.customers.filter(c=>isOver(c)&&c.alerted!==c.due);
+            
+            if(!n.length)return;
+                n.forEach(c=>c.alerted=c.due);
+                save();
+                const pl=n.map(c=>`${c.name} (${peso(bal(c.id))})`).join(', ');
+                
+                try{
+                    if(Notification.permission==='granted')new Notification('Utang past due',{body:pl})}catch(e){}modal('Payment overdue: '+esc(pl),[{t:'OK'}])
+                };
+
+        setInterval(checkDue,30000);
+
+        const tiles=[
+            ['➕','Add Utang','pick','utang'],
+            ['👥','Customers','pick','view'],
+            ['🆕','Add Customer','addc'],
+            ['💵','Payment','pick','pay'],
+            ['🧾','History','hist'],
+            ['⚙️','Settings','sett']
+        ];
+        
+        const V={
+        splash:()=>({
+            nohead:1,h:`<div class="auth" style="padding-top:140px"><div class="logo">🏪</div>
+            <h2>Sari-Sari Store<br>Utang Tracker</h2>
+            <p>Welcome!</p></div>`}),
+        login:()=>({
+            nohead:1,h:`<div class="auth"><div class="logo">🏪</div>
+            <h2>Sari-Sari Store<br>Utang Tracker</h2>
+            ${pinF('pin','PIN').replace('<input','<input data-e="login"')}
+            <button class="btn" data-a="login">Log in</button>
+            <p class="link"><a href="#" data-a="forgot">Forgot PIN?</a></p>
+            </div>`}),
+        signup:()=>({
+            nohead:1,h:`<div class="auth" style="padding-top:28px">
+                <div class="logo">🏪</div>
+                <h2>Sign up</h2>
+                ${fld('n','Name','','placeholder="Enter name"')}
+                ${fld('a','Age','','type="number" inputmode="numeric" placeholder="Enter age"')}
+                ${fld('c','Contact number','','type="tel" placeholder="09XX XXX XXXX"')}
+                ${pinF('p1','Create 4-digit PIN')}
+                ${pinF('p2','Retype PIN')}
+                ${fld('s','Recovery question: What is the name of your first pet?','','placeholder="Your answer"')}
+                <button class="btn" data-a="signup">Sign up</button>
+                </div>`}),
+        home:()=>{
+            const t=db.customers.reduce((s,c)=>s+bal(c.id),0),
+            owing=db.customers.filter(c=>bal(c.id)>0),
+            top=[...owing].sort((a,b)=>bal(b.id)-bal(a.id)).slice(0,3),
+            over=owing.filter(isOver);
+        return{
+            nohead:1,h:`<h2 class="hi">Hello, ${esc(db.owner.name.split(' ')[0])}!</h2>
+            <div class="total"><small>Total utang</small><b>${peso(t)}</b><span>${owing.length} 
+                customer${owing.length==1?'':'s'} with pending utang</span></div>
+                ${over.length?`<div class="alert"><b>${over.length} payment${over.length==1?'':'s'} overdue</b>
+                    ${over.map(c=>
+                        `<button class="row" data-a="nav" data-v="customer" data-id="${c.id}"><span>${esc(c.name)}</span>
+                            <span class="r">${peso(bal(c.id))}</span></button>`).join('')}
+                        </div>`:''}
+            
+            <div class="grid">
+                ${tiles.map(x=>`
+                    <button class="tile" data-a="nav" data-v="${x[2]}" data-m="${x[3]||''}"><i>${x[1]&&x[0]}</i>${x[1]}</button>`).join('')}</div>${top.length?`<h3>Biggest balances</h3>
+                        ${top.map(c=>
+                            `<button class="row" data-a="nav" data-v="customer" data-id="${c.id}"><span>${esc(c.name)}</span>
+                                <span class="r">${peso(bal(c.id))}</span></button>`).join('')}`:`<p class="empty">No pending utang. Add a customer to get started.</p>`}`}},
+
+        pick:()=>{
+            const m=S.p.m;return{t:m=='utang'?'Add Utang To':m=='pay'?'Payment':'Customers List',
+                h:`<label style="margin-bottom:10px"><input id="q" type="search" placeholder="Search name" value="${esc(S.p.q||'')}" style="margin:0"></label>
+                    <div id="list">${rows()}</div>
+                    ${m=='utang'?'<button class="btn" data-a="nav" data-v="addc">Add customer</button>':''}`}},
+
+        customer:()=>{
+            const c=cust(S.p.id);if(!c)return{t:'Customer',h:'<p class="empty">Customer not found.</p>'};const b=bal(c.id),
+                tx=db.txs.filter(x=>x.cid===c.id).reverse().sort((a,z)=>z.date.localeCompare(a.date)).slice(0,6);
+
+            return{t:'Customer',h:`<div class="who"><div>👤</div>
+                <div style="flex:1">
+                    ${S.p.edit?`<input id="nm" value="${esc(c.name)}" placeholder="Customer name" aria-label="Customer name" style="margin:0 0 6px">
+                    <input id="ph" type="tel" value="${esc(c.phone)}" placeholder="Phone number" aria-label="Phone number" style="margin:0">
+                        ${b>0?`<input id="du" type="datetime-local" value="${esc(c.due||'')}" aria-label="Payment due date and time" style="margin:6px 0 0">`:''}`:`<b>${esc(c.name)}</b><small>📞 ${esc(c.phone||'No number')}</small>`}
+                        </div>
+                            <button class="ib" data-a="${S.p.edit?'savePh':'editPh'}" aria-label="${S.p.edit?'Save changes':'Edit details'}">${S.p.edit?'✓':'✎'}</button></div>
+
+        <div class="cur">
+            <div>
+                <small>Current utang</small><div class="big">${peso(b)}
+                    </div>
+                    </div>${pill(b,c)}</div>
+
+        ${b>0&&c.due?`<p class="due${isOver(c)?' od':''}">${isOver(c)?'Overdue since':'Payment due'} <b>${fmtDT(c.due)}</b></p>`:''}
+        <div class="sum">
+                    <div>
+                        <span>Total utang</span><b>${peso(sumT(c.id,'utang'))}</b>
+                        </div>
+                            <div>
+                                <span>Paid payment</span><b>${peso(sumT(c.id,'pay'))}</b>
+                                </div>
+                                    <div>
+                                        <span>Pending utang</span><b>${peso(b)}</b>
+                                        </div>
+                                    </div>
+
+        <button class="btn" data-a="nav" data-v="utang" data-id="${c.id}">Add utang</button>
+            ${b>0?`<button class="btn sec" data-a="nav" data-v="pay" data-id="${c.id}">Record payment</button>`:''}
+
+        ${isOver(c)&&c.phone?`<a class="btn sec" 
+            href="sms:${esc(c.phone)}?&body=${encodeURIComponent(`Hi ${c.name}, paalala po na due na ang utang ninyo na ${peso(b)} noong ${fmtDT(c.due)}. Salamat po!`)}">Remind customer by text</a>`:''}
+
+        <h3>Recent activity</h3>
+            ${tx.length?tx.map(txRow).join(''):'<p class="empty">No transactions yet.</p>'}
+            <button class="btn sec" data-a="back" style="margin-top:20px">Back</button>
+            <button class="btn dng" data-a="del" data-id="${c.id}">Delete customer</button>`}},
+
+        addc:()=>({
+            t:'Add Customer',
+            h:`${fld('n','Name','','placeholder="Customer name"')}${fld('c','Contact number','','type="tel" placeholder="09XX XXX XXXX"')}
+                <h3>Details of utang</h3>
+                    ${fld('i','List of orders (optional note)','','placeholder="e.g. rice, sardines, soap"')}
+                    ${fld('d','Date',today(),'type="date"')}
+                    ${fld('amt','Amount of utang','','type="number" inputmode="decimal" min="0" placeholder="₱0"')}
+                    ${fld('due','Payment due (date & time)',defDue(),'type="datetime-local"')}
+                        <button class="btn" data-a="saveC">Save</button>`}),
+
+        utang:()=>{
+            const c=cust(S.p.id),b=bal(c.id);
+            return{t:'Add Utang To',
+                h:`<div class="who">
+                    <div>👤</div>
+                    <div><b>${esc(c.name)}</b><small>📞 ${esc(c.phone||'No number')}</small></div>
+                </div>
+                <div class="cur">
+                    <div><small>Current utang</small>
+                        <div class="big">${peso(b)}</div>
+                        </div>
+                        ${pill(b)}
+                    </div>
+                
+                <h3 style="margin-top:4px">Details of utang</h3>
+                    ${fld('i','List of orders (optional note)','','placeholder="e.g. rice, sardines, soap"')}
+                    ${fld('d','Date',today(),'type="date"')}
+                    ${fld('amt','Amount of utang','','type="number" inputmode="decimal" min="0" placeholder="₱0"')}
+                    ${fld('due','Payment due (date & time)',b>0&&c.due?c.due:defDue(),'type="datetime-local"')}
+                        <button class="btn" data-a="saveU" data-id="${c.id}">Save</button>`}},
+
+        pay:()=>{
+            const c=cust(S.p.id),b=bal(c.id);
+            return{t:'Payment',
+                h:`<div class="who">
+                    <div>👤</div>
+                    <div><b>${esc(c.name)}</b><small>📞 ${esc(c.phone||'No number')}</small>
+                        </div>
+                        </div>
+                        <div class="cur">
+                            <div><small>Current utang</small>
+                                <div class="big">${peso(b)}
+                                    </div>
+                                    </div>
+                                    ${pill(b)}</div>
+                        
+                    ${fld('amt','How much is the payment?','','type="number" inputmode="decimal" min="0" placeholder="₱0"')}
+                        <button class="chip" data-a="full" data-v="${b}">Pay full ${peso(b)}</button>
+                        ${fld('d','Date',today(),'type="date"')}
+                            <button class="btn" data-a="savePay" data-id="${c.id}">Record payment</button>`}},
+
+        hist:()=>({t:'Transaction History',
+                h:`<label><input id="hq" type="search" placeholder="Search by name or note" style="margin:0"></label>
+                <div id="hl">${hrows()}</div>`}),
+
+        sett:()=>({t:'Settings',
+                h:`<button class="btn" data-a="nav" data-v="prof">Owner’s profile</button>
+                    <button class="btn sec" data-a="notif">Enable due-date notifications</button>
+                    <button class="btn sec" data-a="logout">Log out</button><button class="btn dng" data-a="wipe" style="margin-top:28px">Erase all data</button>`}),
+        prof:()=>{
+            const o=db.owner;
+            return{
+                t:'Owner’s Profile',
+                h:`<div style="text-align:center;font-size:72px;margin-bottom:8px">${av()}</div>
+                    <div class="pr"><span>Name</span><b>${esc(o.name)}</b>
+                        </div>
+
+                    <div class="pr"><span>Age</span><b>${esc(o.age)}</b>
+                        </div>
+
+                    <div class="pr"><span>Contact no.</span><b>${esc(o.phone)}</b>
+                        </div>
+                    
+                    <div class="pr"><span>PIN</span><b>••••</b></div>
+                    
+                    <button class="btn" data-a="nav" data-v="editp" style="margin-top:18px">Edit</button>
+                    <button class="btn sec" data-a="nav" data-v="pin">Change PIN</button>`}},
+
+        editp:()=>{
+            const o=db.owner;newPhoto=null;
+            return{
+                t:'Edit Profile',
+                h:`<div style="text-align:center;margin-bottom:12px">
+                    
+                    <div id="pv" style="font-size:72px">${av()}
+                        </div>
+                    
+                    <label class="btn sec" style="margin-top:8px">Attach photo<input id="pf" type="file" accept="image/*" style="display:none"></label>
+                    </div>
+                    
+                    ${fld('n','Name',o.name)}
+                    ${fld('a','Age',o.age,'type="number" inputmode="numeric"')}
+                    ${fld('c','Contact number',o.phone,'type="tel"')}
+                    
+                    <button class="btn" data-a="saveP">Save</button>`}},
+
+        pin:()=>({
+            t:'Change PIN',
+            h:`${pinF('p0','Current PIN')}
+                ${pinF('p1','New 4-digit PIN')}
+                ${pinF('p2','Confirm new PIN')}
+                <button class="btn" data-a="savePin">Change and save</button>`}),
+
+        forgot:()=>({
+            t:'Forgot PIN',
+            h:`<p>Confirm it’s you to reset your PIN.</p>${fld('c','Registered contact number','','type="tel"')}
+                ${fld('s','What is the name of your first pet?','','placeholder="Your answer"')} 
+                <button class="btn" data-a="verify">Verify</button>
+                    <p class="link"><a href="#" data-a="wipe">Can’t verify? Erase all data and start over</a></p>`}),
+
+        resetpin:()=>({
+            t:'Reset PIN',
+            h:`${pinF('p1','New 4-digit PIN')}
+               ${pinF('p2','Confirm new PIN')}
+            <button class="btn" data-a="resetPin">Reset PIN</button>`})
+        };
+
+        function txRow(x){
+            const c=cust(x.cid);
+            return`<div class="tx">
+                <div><b>${esc(c?c.name:'')}</b><small>${fmt(x.date)}${x.note?' · '+esc(x.note):''}</small>
+                    </div>
+                    <b class="${x.type=='pay'?'p':'u'}">${x.type=='pay'?'−':'+'}${peso(x.amt)}</b></div>`}
+
+        function rows(){
+            const q=(S.p.q||'').toLowerCase(),m=S.p.m;let l=db.customers.filter(c=>c.name.toLowerCase().includes(q));if(m=='pay')l=l.filter(c=>bal(c.id)>0);l.sort((a,b)=>a.name.localeCompare(b.name));
+
+        return l.length?l.map(c=>{const b=bal(c.id);
+            return`<button class="row" data-a="pick" data-id="${c.id}"><span>${esc(c.name)}</span><span class="r"${b>0?'':' style="color:var(--mut);font-weight:400"'}>${b>0?peso(b)+(isOver(c)?' ⚠':''):'No due'}</span>
+                    </button>`}).join(''):`<p class="empty">${m=='pay'?'Nobody owes you right now.':db.customers.length?'No customers match your search.':(m=='utang'?'No customers yet. Tap “Add customer” below.':'No customers yet. Use “Add Customer” on the home screen.')}</p>`}
+
+        function hrows(){
+            const q=g('hq').toLowerCase(),l=[...db.txs].reverse().sort((a,b)=>b.date.localeCompare(a.date)).filter(x=>(!q||((cust(x.cid)||{}).name||'').toLowerCase().includes(q)||(x.note||'').toLowerCase().includes(q)));
+                
+                return l.length?l.map(txRow).join(''):'<p class="empty">No transactions to show.</p>'}
+
+        function render(){
+            const v=(V[S.v]||V.login)();$('#app').innerHTML=(v.nohead?'':`<header>${hist.length||S.v=='customer'?'<button class="ib" data-a="back" aria-label="Back">←</button>':''}<h1>${v.t}</h1></header>`)+`<main>${v.h}</main>`}
+
+        let newPhoto=null;
+            const av=(p=db.owner&&db.owner.photo)=>p?`<img class="av" src="${p}" alt="Owner photo">`:'👤';
+
+            const A={nav:d=>nav(d.v,{m:d.m,id:d.id}),
+        
+        tp:(d,t)=>{
+            const i=t.previousElementSibling;i.type=i.type=='password'?'text':'password';t.textContent=i.type=='password'?'Show':'Hide'},
+
+        async notif(){
+            try{
+                const r=await Notification.requestPermission();ok(r=='granted'?'Notifications enabled. You will be alerted when a payment is overdue while the app is open.':'Notifications are blocked. You will still see in-app overdue alerts.')}
+                
+                catch(e){ok('This browser does not support notifications. You will still see in-app overdue alerts.')}},
+
+        back:()=>{
+            S=hist.pop()||{v:'home',p:{}};render()},
+
+        pick:d=>
+            nav(S.p.m=='pay'?'pay':S.p.m=='utang'?'utang':'customer',{id:d.id}),
+
+        async login(){
+            if(Date.now()<lockT)
+                return ok('Too many tries. Please wait a few seconds.');
+            
+                if(await hash(g('pin'))===db.owner.pin){fails=0;home()}
+                
+                else{
+                    if(++fails>=5){lockT=Date.now()+3e4;fails=0}ok('Incorrect PIN. Please try again.')}},
+
+        forgot:()=>nav('forgot'),
+        
+        async verify(){
+            const o=db.owner,d=x=>x.replace(/\D/g,'');
+                if(d(g('c'))!==d(o.phone))
+                    return ok('That contact number does not match our records.');
+                
+                    if(o.ans&&await hash(g('s').toLowerCase())!==o.ans)
+                        return ok('That answer is incorrect.');rep('resetpin')},
+
+        async resetPin(){
+            const p=g('p1');
+                if(!/^\d{4}$/.test(p))
+                    return ok('PIN must be exactly 4 digits.');
+                
+                    if(p!==g('p2'))
+                        return ok('The PINs do not match.');db.owner.pin=await hash(p);save();ok('PIN reset! Log in with your new PIN.',()=>{hist=[];rep('login')})},
+
+        reset(){
+            db={owner:null,customers:[],txs:[]};save();hist=[];rep('signup')},
+
+        wipe:()=>modal('Erase ALL customers, utang and your account? This cannot be undone.',[{t:'Cancel',p:0},{t:'Erase all',f:()=>A.reset()}]),
+        
+        async signup(){
+            const n=g('n'),a=+g('a'),c=g('c'),p=g('p1');
+                if(!n)
+                    return ok('Please enter your name.');
+                
+                    if(!(a>=1&&a<=120))
+                        return ok('Please enter a valid age.');
+                    
+                        if(c.replace(/\D/g,'').length<7)
+                            return ok('Please enter a valid contact number.');
+
+                            if(!/^\d{4}$/.test(p))
+                                return ok('PIN must be exactly 4 digits.');
+                            
+                                if(p!==g('p2'))
+                                    return ok('The PINs do not match.');
+                                
+                                    if(!g('s'))
+                                        return ok('Please answer the recovery question. You will need it if you forget your PIN.');
+
+        db.owner={
+            name:n,age:a,phone:c,pin:await hash(p),ans:await hash(g('s').toLowerCase())};save();modal('Account created! Tap OK to log in.',[{t:'OK',f:()=>rep('login')}])},
+        
+            logout:()=>
+                modal('Are you sure you want to log out?',[{t:'Back',p:0},{t:'Yes',f:()=>{hist=[];rep('login')}}]),
+        
+                editPh(){S.p.edit=1;render()},
+        
+        savePh(){
+            const c=cust(S.p.id),n=g('nm');
+                if(!n)
+                    return ok('Please enter the customer’s name.');
+                
+                    if(db.customers.some(x=>x.id!==c.id&&x.name.toLowerCase()===n.toLowerCase()))
+                        return ok('A customer with this name already exists.');c.name=n;c.phone=g('ph');
+                    
+                        if($('#du')&&g('du'))c.due=g('du');save();S.p.edit=0;render()},
+        
+        del(d){
+            modal('Delete this customer and all their transactions?',[{t:'Cancel',p:0},{t:'Delete',f:()=>{db.customers=db.customers.filter(c=>c.id!==d.id);db.txs=db.txs.filter(x=>x.cid!==d.id);save();A.back()}}])},
+        
+        saveC(){
+            const n=g('n');
+            if(!n)
+                return ok('Please enter the customer’s name.');
+            
+                if(db.customers.some(c=>c.name.toLowerCase()===n.toLowerCase()))
+                    return ok('A customer with this name already exists.');
+
+        const amt=+g('amt');
+            if(!(amt>0))
+                return ok('Please enter the amount of utang.');
+            
+                if(!g('d'))
+                    return ok('Please choose a date.');
+                
+                    if(!(new Date(g('due'))>new Date()))
+                        return ok('Please choose a future due date and time.');const c={id:uid(),name:n,phone:g('c'),due:g('due')};db.customers.push(c);db.txs.push({id:uid(),cid:c.id,type:'utang',amt,date:g('d')||today(),note:g('i')});save();ok('Saved information.',()=>rep('customer',{id:c.id}))},
+
+        saveU(d){
+            const amt=+g('amt');
+                if(!(amt>0))
+                    return ok('Please enter an amount greater than zero.');
+                
+                    if(!(new Date(g('due'))>new Date()))
+                        return ok('Please choose a future due date and time.');db.txs.push({id:uid(),cid:d.id,type:'utang',amt,date:g('d')||today(),note:g('i')});cust(d.id).due=g('due');save();ok('New utang added!',()=>toCust(d.id))},
+
+        full:d=>{$('#amt').value=d.v},
+        savePay(d){
+            const amt=+g('amt'),b=bal(d.id);
+                if(!(amt>0))
+                    return ok('Please enter an amount greater than zero.');
+                
+                    if(amt>b)
+                        return ok(`That is more than the pending utang of ${peso(b)}.`);
+
+        modal(`Are you sure of the amount? ${peso(amt)}`,[{t:'Cancel',p:0},{t:'Yes, proceed',f:()=>{db.txs.push({id:uid(),cid:d.id,type:'pay',amt,date:g('d')||today(),note:''});
+            if(bal(d.id)<=0)cust(d.id).due=null;save();ok('Payment successful!',()=>toCust(d.id))}}])},
+
+        saveP(){
+            const n=g('n'),a=+g('a'),c=g('c');
+            if(!n||!(a>=1&&a<=120)||c.replace(/\D/g,'').length<7)
+                return ok('Please fill in a valid name, age and contact number.');Object.assign(db.owner,{name:n,age:a,phone:c});
+            
+                if(newPhoto)db.owner.photo=newPhoto;newPhoto=null;save();ok('Profile updated.',A.back)},
+
+        async savePin(){
+            if(await hash(g('p0'))!==db.owner.pin)
+                return ok('Current PIN is incorrect.');const p=g('p1');
+            
+                if(!/^\d{4}$/.test(p))
+                    return ok('PIN must be exactly 4 digits.');
+                
+                    if(p!==g('p2'))
+                        return ok('The PINs do not match.');db.owner.pin=await hash(p);save();ok('PIN changed successfully!',A.back)}
+
+        };
+        document.addEventListener('click',e=>{const t=e.target.closest('[data-a]');if(t&&A[t.dataset.a]){e.preventDefault();A[t.dataset.a](t.dataset,t)}});
+        document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.dataset.e)A[e.target.dataset.e]()});
+        document.addEventListener('input',e=>{const i=e.target.id;if(i==='q'){S.p.q=e.target.value;$('#list').innerHTML=rows()}else if(i==='hq')$('#hl').innerHTML=hrows()});
+        document.addEventListener('change',e=>{
+            if(e.target.id!=='pf')
+                return;const f=e.target.files[0];
+            
+                if(!f)
+                    return;
+                
+                    if(!f.type.startsWith('image/'))
+                        return ok('Please choose an image file.');
+                            const r=new FileReader();r.onload=()=>{
+                                const im=new Image();im.onload=()=>{
+                                    const m=Math.min(im.width,im.height),
+                                                        cv=document.createElement('canvas');
+                                                        cv.width=cv.height=256;
+                                                        cv.getContext('2d').drawImage(im,(im.width-m)/2,(im.height-m)/2,m,m,0,0,256,256);
+                                                        newPhoto=cv.toDataURL('image/jpeg',.8);$('#pv').innerHTML=av(newPhoto)};
+                                                        im.onerror=()=>ok('That image could not be read.');
+                                                        im.src=r.result};r.readAsDataURL(f)});
+        render();setTimeout(()=>{rep(db.owner?'login':'signup')},1200);
+        </script>
+        
+    </body>    
+</html>
