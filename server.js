@@ -22,6 +22,8 @@ app.get('/api/db-check', async (req, res) => {
 });
 
 app.use('/api/auth', require('./routes/auth'));
+app.use('/api/customers', require('./routes/customers'));
+app.use('/api/transactions', require('./routes/transactions'));
 
 app.get('/api/me', auth, async (req, res) => {
   const q = await pool.query(
@@ -38,3 +40,4 @@ app.use((err, req, res, next) => {
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+
