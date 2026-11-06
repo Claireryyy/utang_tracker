@@ -3,6 +3,7 @@ const express = require('express');
 const helmet = require('helmet');
 const path = require('path');
 const pool = require('./db');
+const auth = require('./middleware/auth');
 
 const app = express();
 app.use(helmet({ contentSecurityPolicy: false }));
@@ -18,6 +19,21 @@ app.get('/api/db-check', async (req, res) => {
   } catch (e) {
     res.status(500).json({ ok: false, error: e.message });
   }
+});
+
+app.use('/api/auth', require('./routes/auth'));
+
+app.get('/api/me', auth, async (req, res) => {
+  const q = await pool.query(
+    'SELECT id, name, age, phone, photo_url FROM owners WHERE id = $1',
+    [req.ownerId]
+  );
+  res.json(q.rows[0]);
+});
+
+app.use((err, req, res, next) => {
+  console.error(err);
+  res.status(500).json({ error: 'Something went wrong.' });
 });
 
 const PORT = process.env.PORT || 3000;
