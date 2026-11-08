@@ -330,7 +330,9 @@
             background:none;
             color:var(--pri);
             font:700 14px system-ui,sans-serif;padding:8px;
-            cursor:pointer;
+        }
+        input[type="password"]::-ms-reveal{
+            display:none
         }
         .sum{
             background:var(--card);
@@ -464,6 +466,7 @@
         const esc=s=>String(s??'').replace(/[&<>"']/g,
             c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])
         );
+        const cap=s=>s.charAt(0).toUpperCase()+s.slice(1);
 
         const peso=n=>'₱'+Number(n).toLocaleString('en-PH',
             {maximumFractionDigits:2});
@@ -595,7 +598,7 @@
             top=[...owing].sort((a,b)=>bal(b.id)-bal(a.id)).slice(0,3),
             over=owing.filter(isOver);
         return{
-            nohead:1,h:`<h2 class="hi">Hello, ${esc(db.owner.name.split(' ')[0])}!</h2>
+            nohead:1,h:`<h2 class="hi">Hello, ${esc(cap(db.owner.name.split(' ')[0]))}!</h2>
             <div class="total"><small>Total utang</small><b>${peso(t)}</b><span>${owing.length} 
                 customer${owing.length==1?'':'s'} with pending utang</span></div>
                 ${over.length?`<div class="alert"><b>${over.length} payment${over.length==1?'':'s'} overdue</b>
