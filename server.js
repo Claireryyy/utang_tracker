@@ -7,7 +7,7 @@ const auth = require('./middleware/auth');
 
 const app = express();
 app.use(helmet({ contentSecurityPolicy: false }));
-app.use(express.json());
+app.use(express.json({ limit: '400kb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.get('/api/health', (req, res) => res.json({ ok: true }));
@@ -24,6 +24,7 @@ app.get('/api/db-check', async (req, res) => {
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/customers', require('./routes/customers'));
 app.use('/api/transactions', require('./routes/transactions'));
+app.use('/api/owner', require('./routes/owner'));
 
 app.get('/api/me', auth, async (req, res) => {
   const q = await pool.query(

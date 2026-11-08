@@ -14,7 +14,7 @@ router.get('/', async (req, res) => {
             c.id AS customer_id, c.name AS customer_name
        FROM transactions t JOIN customers c ON c.id = t.customer_id
       WHERE c.owner_id = $1 AND (c.name ILIKE $2 OR COALESCE(t.note,'') ILIKE $2)
-      ORDER BY t.tx_date DESC, t.id DESC LIMIT 200`,
+      ORDER BY t.tx_date DESC, t.id DESC LIMIT 2000`,
     [req.ownerId, `%${s}%`]
   );
   res.json(q.rows);
