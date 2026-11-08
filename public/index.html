@@ -96,7 +96,7 @@ setInterval(checkDue,30000);
 const tiles=[['➕','Add Utang','pick','utang'],['👥','Customers','pick','view'],['🆕','Add Customer','addc'],['💵','Payment','pick','pay'],['🧾','History','hist'],['⚙️','Settings','sett']];
 const V={
 splash:()=>({nohead:1,h:`<div class="auth" style="padding-top:140px"><div class="logo">🏪</div><h2>Sari-Sari Store<br>Utang Tracker</h2><p>Welcome!</p></div>`}),
-login:()=>({nohead:1,h:`<div class="auth"><div class="logo">🏪</div><h2>Sari-Sari Store<br>Utang Tracker</h2>${lp()?`<p style="margin:0 0 14px">Welcome back! <b>${esc(lp().slice(0,4))}•••${esc(lp().slice(-3))}</b></p>`:fld('ph','Contact number','','type="tel" autocomplete="username" placeholder="09XX XXX XXXX"')}${pinF('pin','PIN').replace('<input','<input data-e="login"')}<button class="btn" data-a="login">Log in</button><p class="link"><a href="#" data-a="forgot">Forgot PIN?</a></p>${lp()?'<p class="link"><a href="#" data-a="other">Not you? Use another number</a></p>':''}<p class="link">New here? <a href="#" data-a="toSignup">Sign up</a></p></div>`}),
+login:()=>({nohead:1,h:`<div class="auth"><div class="logo">🏪</div><h2>Sari-Sari Store<br>Utang Tracker</h2>${lp()&&!S.p.other?`<p style="margin:0 0 14px">Welcome back! <b>${esc(lp().slice(0,4))}•••${esc(lp().slice(-3))}</b></p>`:fld('ph','Contact number','','type="tel" autocomplete="username" placeholder="09XX XXX XXXX"')}${pinF('pin','PIN').replace('<input','<input data-e="login"')}<button class="btn" data-a="login">Log in</button><p class="link"><a href="#" data-a="forgot">Forgot PIN?</a></p>${lp()?(S.p.other?`<p class="link"><a href="#" data-a="same">← Back to ${esc(lp().slice(0,4))}•••${esc(lp().slice(-3))}</a></p>`:'<p class="link"><a href="#" data-a="other">Not you? Use another number</a></p>'):''}<p class="link">New here? <a href="#" data-a="toSignup">Sign up</a></p></div>`}),
 signup:()=>({nohead:1,h:`<div class="auth" style="padding-top:28px"><div class="logo">🏪</div><h2>Sign up</h2>${fld('n','Name','','placeholder="Enter name"')}${fld('a','Age','','type="number" inputmode="numeric" placeholder="Enter age"')}${fld('c','Contact number','','type="tel" placeholder="09XX XXX XXXX"')}${pinF('p1','Create 4-digit PIN')}${pinF('p2','Retype PIN')}${fld('s','Recovery question: What is the name of your first pet?','','placeholder="Your answer"')}<button class="btn" data-a="signup">Sign up</button><p class="link"><a href="#" data-a="toLogin">Back to log in</a></p></div>`}),
 home:()=>{const t=db.customers.reduce((s,c)=>s+bal(c.id),0),owing=db.customers.filter(c=>bal(c.id)>0),top=[...owing].sort((a,b)=>bal(b.id)-bal(a.id)).slice(0,3),over=owing.filter(isOver);
 return{nohead:1,h:`<h2 class="hi">Hello, ${esc(cap(db.owner.name.split(' ')[0]))}!</h2><div class="total"><small>Total utang</small><b>${peso(t)}</b><span>${owing.length} customer${owing.length==1?'':'s'} with pending utang</span></div>${over.length?`<div class="alert"><b>${over.length} payment${over.length==1?'':'s'} overdue</b>${over.map(c=>`<button class="row" data-a="nav" data-v="customer" data-id="${c.id}"><span>${esc(c.name)}</span><span class="r">${peso(bal(c.id))}</span></button>`).join('')}</div>`:''}<div class="grid">${tiles.map(x=>`<button class="tile" data-a="nav" data-v="${x[2]}" data-m="${x[3]||''}"><i>${x[1]&&x[0]}</i>${x[1]}</button>`).join('')}</div>${top.length?`<h3>Biggest balances</h3>${top.map(c=>`<button class="row" data-a="nav" data-v="customer" data-id="${c.id}"><span>${esc(c.name)}</span><span class="r">${peso(bal(c.id))}</span></button>`).join('')}`:`<p class="empty">No pending utang. Add a customer to get started.</p>`}`}},
@@ -123,34 +123,135 @@ function txRow(x){const c=cust(x.cid);return`<div class="tx"><div><b>${esc(c?c.n
 function rows(){const q=(S.p.q||'').toLowerCase(),m=S.p.m;let l=db.customers.filter(c=>c.name.toLowerCase().includes(q));if(m=='pay')l=l.filter(c=>bal(c.id)>0);l.sort((a,b)=>a.name.localeCompare(b.name));
 return l.length?l.map(c=>{const b=bal(c.id);return`<button class="row" data-a="pick" data-id="${c.id}"><span>${esc(c.name)}</span><span class="r"${b>0?'':' style="color:var(--mut);font-weight:400"'}>${b>0?peso(b)+(isOver(c)?' ⚠':''):'No due'}</span></button>`}).join(''):`<p class="empty">${m=='pay'?'Nobody owes you right now.':db.customers.length?'No customers match your search.':(m=='utang'?'No customers yet. Tap “Add customer” below.':'No customers yet. Use “Add Customer” on the home screen.')}</p>`}
 function hrows(){const q=g('hq').toLowerCase(),l=[...db.txs].reverse().sort((a,b)=>b.date.localeCompare(a.date)).filter(x=>(!q||((cust(x.cid)||{}).name||'').toLowerCase().includes(q)||(x.note||'').toLowerCase().includes(q)));return l.length?l.map(txRow).join(''):'<p class="empty">No transactions to show.</p>'}
-function render(){const v=(V[S.v]||V.login)();$('#app').innerHTML=(v.nohead?'':`<header>${hist.length||S.v=='customer'?'<button class="ib" data-a="back" aria-label="Back">←</button>':''}<h1>${v.t}</h1></header>`)+`<main>${v.h}</main>`}
+function render(){
+    const v=(V[S.v]||V.login)();$('#app').innerHTML=(v.nohead?'':`<header>${hist.length||S.v=='customer'?'<button class="ib" data-a="back" aria-label="Back">←</button>':''}<h1>${v.t}</h1></header>`)+`<main>${v.h}</main>`}
+
 let newPhoto=null;const av=(p=db.owner&&db.owner.photo)=>p?`<img class="av" src="${p}" alt="Owner photo">`:'👤';
+
 const A={
-nav:d=>nav(d.v,{m:d.m,id:d.id}),
+    nav:d=>nav(d.v,{m:d.m,id:d.id}),
+
 back:()=>{S=hist.pop()||{v:'home',p:{}};render()},
-pick:d=>nav(S.p.m=='pay'?'pay':S.p.m=='utang'?'utang':'customer',{id:d.id}),
-tp:(d,t)=>{const i=t.previousElementSibling;i.type=i.type=='password'?'text':'password';t.textContent=i.type=='password'?'Show':'Hide'},
-async notif(){try{const r=await Notification.requestPermission();ok(r=='granted'?'Notifications enabled. You will be alerted when a payment is overdue while the app is open.':'Notifications are blocked. You will still see in-app overdue alerts.')}catch(e){ok('This browser does not support notifications. You will still see in-app overdue alerts.')}},
+
+pick:d=>
+    nav(S.p.m=='pay'?'pay':S.p.m=='utang'?'utang':'customer',{id:d.id}),
+
+tp:(d,t)=>{
+    const i=t.previousElementSibling;i.type=i.type=='password'?'text':'password';t.textContent=i.type=='password'?'Show':'Hide'},
+
+async notif(){
+    try{const r=await Notification.requestPermission();
+        ok(r=='granted'?'Notifications enabled. You will be alerted when a payment is overdue while the app is open.':'Notifications are blocked. You will still see in-app overdue alerts.')}
+        
+        catch(e){ok('This browser does not support notifications. You will still see in-app overdue alerts.')}},
+
 toSignup:()=>rep('signup'),toLogin:()=>rep('login'),forgot:()=>nav('forgot'),
-login:()=>run(async()=>{const phone=lp()||g('ph').replace(/\D/g,'');const r=await api('POST','/auth/login',{phone,pin:g('pin')});sess(r.token);try{localStorage.setItem('lp',phone)}catch(e){}await load();home()}),
-other:()=>{try{localStorage.removeItem('lp')}catch(e){}render()},
-signup:()=>run(async()=>{if(g('p1')!==g('p2'))return ok('The PINs do not match.');const r=await api('POST','/auth/signup',{name:g('n'),age:g('a'),phone:g('c'),pin:g('p1'),recovery:g('s')});try{localStorage.setItem('lp',g('c').replace(/\D/g,''))}catch(e){}modal(r.message,[{t:'OK',f:()=>rep('login')}])}),
-verify:()=>run(async()=>{const r=await api('POST','/auth/forgot/verify',{phone:g('c'),recovery:g('s')});resetTok=r.resetToken;rep('resetpin')}),
-resetPin:()=>run(async()=>{if(g('p1')!==g('p2'))return ok('The PINs do not match.');const r=await api('POST','/auth/forgot/reset',{resetToken:resetTok,pin:g('p1')});ok(r.message,()=>{hist=[];rep('login')})}),
-logout:()=>modal('Are you sure you want to log out?',[{t:'Back',p:0},{t:'Yes',f:()=>{sess(null);db={owner:null,customers:[],txs:[]};hist=[];rep('login')}}]),
+
+login:()=>run(async()=>{
+    const phone=(lp()&&!S.p.other)?lp():g('ph').replace(/\D/g,'');const r=await api('POST','/auth/login',{phone,pin:g('pin')});sess(r.token);
+        try{localStorage.setItem('lp',phone)}
+            catch(e){}await load();home()}),
+
+other:()=>{S.p.other=1;render()},
+
+same:()=>{S.p.other=0;render()},
+
+signup:()=>run(async()=>{
+    if(g('p1')!==g('p2'))
+        return ok('The PINs do not match.');
+    
+        const r=await api('POST','/auth/signup',{name:g('n'),age:g('a'),phone:g('c'),pin:g('p1'),recovery:g('s')});
+            try{localStorage.setItem('lp',g('c').replace(/\D/g,''))}
+                catch(e){}modal(r.message,[{t:'OK',f:()=>rep('login')}])}),
+
+verify:()=>run(async()=>{
+    const r=await api('POST','/auth/forgot/verify',{phone:g('c'),recovery:g('s')});resetTok=r.resetToken;rep('resetpin')}),
+
+resetPin:()=>run(async()=>{
+    if(g('p1')!==g('p2'))
+        return ok('The PINs do not match.');
+    
+        const r=await api('POST','/auth/forgot/reset',{resetToken:resetTok,pin:g('p1')});ok(r.message,()=>{hist=[];rep('login')})}),
+
+logout:()=>
+    modal('Are you sure you want to log out?',[{t:'Back',p:0},{t:'Yes',f:()=>{sess(null);
+        db={owner:null,customers:[],txs:[]};hist=[];rep('login')}}]),
+
 editPh(){S.p.edit=1;render()},
-savePh:()=>run(async()=>{const c=cust(S.p.id),du=g('du'),b={name:g('nm'),phone:g('ph')};if(du&&du!==c.due)b.dueAt=iso(du);await api('PUT','/customers/'+c.id,b);await load();S.p.edit=0;render()}),
-del:d=>modal('Delete this customer and all their transactions?',[{t:'Cancel',p:0},{t:'Delete',f:()=>run(async()=>{await api('DELETE','/customers/'+d.id);await load();A.back()})}]),
-saveC:()=>run(async()=>{const r=await api('POST','/customers',{name:g('n'),phone:g('c'),amount:+g('amt'),date:g('d'),dueAt:iso(g('due')),note:g('i')});await load();ok(r.message,()=>rep('customer',{id:String(r.id)}))}),
-saveU:d=>run(async()=>{const r=await api('POST',`/customers/${d.id}/utang`,{amount:+g('amt'),date:g('d'),dueAt:iso(g('due')),note:g('i')});await load();ok(r.message,()=>toCust(d.id))}),
+
+savePh:()=>run(async()=>{
+    const c=cust(S.p.id),du=g('du'),b={name:g('nm'),phone:g('ph')};
+        if(du&&du!==c.due)b.dueAt=iso(du);await api('PUT','/customers/'+c.id,b);await load();S.p.edit=0;render()}),
+
+del:d=>
+    modal('Delete this customer and all their transactions?',[{t:'Cancel',p:0},{t:'Delete',f:()=>run(async()=>{
+    await api('DELETE','/customers/'+d.id);await load();A.back()})}]),
+
+saveC:()=>run(async()=>{
+    const r=await api('POST','/customers',{name:g('n'),phone:g('c'),amount:+g('amt'),date:g('d'),dueAt:iso(g('due')),note:g('i')});await load();ok(r.message,()=>rep('customer',{id:String(r.id)}))}),
+
+saveU:d=>run(async()=>{
+    const r=await api('POST',`/customers/${d.id}/utang`,{amount:+g('amt'),date:g('d'),dueAt:iso(g('due')),note:g('i')});await load();ok(r.message,()=>toCust(d.id))}),
+
 full:d=>{$('#amt').value=d.v},
-savePay:d=>run(async()=>{const amt=+g('amt');if(!(amt>0))return ok('Enter an amount greater than zero.');modal(`Are you sure of the amount? ${peso(amt)}`,[{t:'Cancel',p:0},{t:'Yes, proceed',f:()=>run(async()=>{const r=await api('POST',`/customers/${d.id}/payments`,{amount:amt,date:g('d')});await load();ok(r.message,()=>toCust(d.id))})}])}),
-saveP:()=>run(async()=>{const b={name:g('n'),age:g('a'),phone:g('c')};if(newPhoto)b.photo=newPhoto;await api('PUT','/owner',b);newPhoto=null;await load();ok('Profile updated.',A.back)}),
-savePin:()=>run(async()=>{if(g('p1')!==g('p2'))return ok('The PINs do not match.');const r=await api('PUT','/owner/pin',{current:g('p0'),pin:g('p1')});ok(r.message,A.back)})
+
+savePay:d=>run(async()=>{
+    const amt=+g('amt');
+        if(!(amt>0))
+            return ok('Enter an amount greater than zero.');
+                   modal(`Are you sure of the amount? ${peso(amt)}`,[{t:'Cancel',p:0},{t:'Yes, proceed',f:()=>run(async()=>{
+                        const r=await api('POST',`/customers/${d.id}/payments`,{amount:amt,date:g('d')});await load();ok(r.message,()=>toCust(d.id))})}])}),
+saveP:()=>run(async()=>{
+    const b={name:g('n'),age:g('a'),phone:g('c')};
+        if(newPhoto)b.photo=newPhoto;await api('PUT','/owner',b);newPhoto=null;await load();ok('Profile updated.',A.back)}),
+
+savePin:()=>run(async()=>{
+    if(g('p1')!==g('p2'))
+        return ok('The PINs do not match.');
+    
+        const r=await api('PUT','/owner/pin',{current:g('p0'),pin:g('p1')});ok(r.message,A.back)})
 };
-document.addEventListener('click',e=>{const t=e.target.closest('[data-a]');if(t&&A[t.dataset.a]){e.preventDefault();A[t.dataset.a](t.dataset,t)}});
-document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.dataset.e)A[e.target.dataset.e]()});
-document.addEventListener('input',e=>{const i=e.target.id;if(i==='q'){S.p.q=e.target.value;$('#list').innerHTML=rows()}else if(i==='hq')$('#hl').innerHTML=hrows()});
-document.addEventListener('change',e=>{if(e.target.id!=='pf')return;const f=e.target.files[0];if(!f)return;if(!f.type.startsWith('image/'))return ok('Please choose an image file.');const r=new FileReader();r.onload=()=>{const im=new Image();im.onload=()=>{const m=Math.min(im.width,im.height),cv=document.createElement('canvas');cv.width=cv.height=256;cv.getContext('2d').drawImage(im,(im.width-m)/2,(im.height-m)/2,m,m,0,0,256,256);newPhoto=cv.toDataURL('image/jpeg',.8);$('#pv').innerHTML=av(newPhoto)};im.onerror=()=>ok('That image could not be read.');im.src=r.result};r.readAsDataURL(f)});
-render();setTimeout(async()=>{if(token){try{await load();return home()}catch(e){sess(null)}}rep('login')},1000);
-</script></body></html>
+
+document.addEventListener('click',e=>{
+    const t=e.target.closest('[data-a]');
+        if(t&&A[t.dataset.a]){e.preventDefault();A[t.dataset.a](t.dataset,t)}});
+
+document.addEventListener('keydown',e=>{
+    if(e.key==='Enter'&&e.target.dataset.e)A[e.target.dataset.e]()});
+
+document.addEventListener('input',e=>{
+    const i=e.target.id;
+        if(i==='q'){S.p.q=e.target.value;$('#list').innerHTML=rows()}
+            else if(i==='hq')$('#hl').innerHTML=hrows()});
+
+document.addEventListener('change',e=>{
+    if(e.target.id!=='pf')
+        return;const f=e.target.files[0];
+    
+        if(!f)
+            return;
+        
+        if(!f.type.startsWith('image/'))
+            return ok('Please choose an image file.');
+        
+            const r=new FileReader();r.onload=()=>{
+                
+            const im=new Image();im.onload=()=>{
+                const m=Math.min(im.width,im.height),
+                      cv=document.createElement('canvas');
+                      cv.width=cv.height=256;
+                      cv.getContext('2d').drawImage(im,(im.width-m)/2,(im.height-m)/2,m,m,0,0,256,256);
+                      newPhoto=cv.toDataURL('image/jpeg',.8);$('#pv').innerHTML=av(newPhoto)};
+                      im.onerror=()=>ok('That image could not be read.');
+                      im.src=r.result}
+                      ;r.readAsDataURL(f)});
+
+render();setTimeout(async()=>{
+    if(token){
+        try{await load();
+            return home()}
+            
+            catch(e){sess(null)}}rep('login')},1000);
+</script>
+</body>
+</html>

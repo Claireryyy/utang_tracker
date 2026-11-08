@@ -24,7 +24,7 @@ app.get('/api/db-check', async (req, res) => {
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/customers', require('./routes/customers'));
 app.use('/api/transactions', require('./routes/transactions'));
-app.use('/api/owner', require('./routes/owner'));
+app.use('/api/owner', require('./routes/owners'));
 
 app.get('/api/me', auth, async (req, res) => {
   const q = await pool.query(
