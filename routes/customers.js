@@ -17,12 +17,16 @@ const day = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Choose a valid date.');
 const dueAt = z
   .string()
   .refine((v) => !isNaN(Date.parse(v)) && new Date(v) > new Date(), 'Choose a future due date and time.');
-const note = z.string().trim().max(200).optional();
+const note = z
+  .string()
+  .trim()
+  .min(1, 'Please enter the list of orders.')
+  .max(200, 'The list of orders is too long (200 characters max).');
 const phone = z.string().trim().max(30).default('');
 const name = z.string().trim().min(1, 'Please enter the customer’s name.').max(80);
 
-const newCustomer = z.object({ name, phone, amount: money, date: day, dueAt, note });
-const newUtang = z.object({ amount: money, date: day, dueAt, note });
+const newCustomer = z.object({ name, phone, note, date: day, amount: money, dueAt });
+const newUtang = z.object({ note, date: day, amount: money, dueAt });
 const newPayment = z.object({ amount: money, date: day });
 const editCustomer = z.object({ name, phone, dueAt: dueAt.optional() });
 
