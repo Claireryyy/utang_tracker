@@ -25,6 +25,7 @@ app.use('/api/auth', require('./routes/auth'));
 app.use('/api/customers', require('./routes/customers'));
 app.use('/api/transactions', require('./routes/transactions'));
 app.use('/api/owner', require('./routes/owners'));
+app.use('/api/push', require('./routes/push'));
 
 app.get('/api/me', auth, async (req, res) => {
   const q = await pool.query(
@@ -39,6 +40,9 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: 'Something went wrong.' });
 });
 
+const cron = require('node-cron');
+const { checkDue } = require('./jobs/duereminders');
+cron.schedule('*/5 * * * *', () => checkDue().catch(console.error));
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 

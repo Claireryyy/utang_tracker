@@ -27,3 +27,15 @@ CREATE TABLE transactions (
   note TEXT,
   created_at TIMESTAMPTZ DEFAULT now()
 );
+
+CREATE TABLE push_subscriptions (
+  id SERIAL PRIMARY KEY,
+  owner_id INT NOT NULL REFERENCES owners(id) ON DELETE CASCADE,
+  endpoint TEXT NOT NULL UNIQUE,
+  p256dh TEXT NOT NULL,
+  auth TEXT NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+ALTER TABLE customers ADD COLUMN notified_soon_for TIMESTAMPTZ;
+ALTER TABLE customers ADD COLUMN last_overdue_reminder DATE;

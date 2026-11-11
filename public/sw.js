@@ -1,4 +1,4 @@
-const CACHE = 'utang-shell-v1';
+const CACHE = 'utang-shell-v2';
 const SHELL = ['/', '/manifest.json', '/icon-192.png', '/icon-512.png'];
  
 self.addEventListener('install', (e) => {
@@ -30,5 +30,31 @@ self.addEventListener('fetch', (e) => {
         return res;
       })
       .catch(() => caches.match(r).then((m) => m || caches.match('/')))
+  );
+});
+ 
+// Push notification received (works even when the app is closed)
+self.addEventListener('push', (e) => {
+  let d = {};
+  try { d = e.data.json(); } catch (err) {}
+  e.waitUntil(
+    self.registration.showNotification(d.title || 'Utang Tracker', {
+      body: d.body || '',
+      icon: '/icon-192.png',
+      badge: '/icon-192.png',
+      tag: d.tag,
+      data: { url: d.url || '/' },
+    })
+  );
+});
+ 
+// Tapping the notification opens (or focuses) the app
+self.addEventListener('notificationclick', (e) => {
+  e.notification.close();
+  e.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((list) => {
+      for (const c of list) if ('focus' in c) return c.focus();
+      return clients.openWindow((e.notification.data && e.notification.data.url) || '/');
+    })
   );
 });

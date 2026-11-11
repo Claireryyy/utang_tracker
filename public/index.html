@@ -67,6 +67,7 @@ const sess=t=>{token=t;try{t?sessionStorage.setItem('tk',t):sessionStorage.remov
 const toLocal=v=>{const d=new Date(v);return new Date(d-d.getTimezoneOffset()*6e4).toISOString().slice(0,16)};
 const iso=v=>{const d=new Date(v);return isNaN(d)?'':d.toISOString()};
 const run=f=>f().catch(e=>ok(e.message));
+const b64=s=>{const r=atob((s+'='.repeat((4-s.length%4)%4)).replace(/-/g,'+').replace(/_/g,'/'));return Uint8Array.from([...r].map(c=>c.charCodeAt(0)))};
 const lp=()=>{try{return localStorage.getItem('lp')||''}catch(e){return''}};
 async function api(m,p,b){let r;try{r=await fetch('/api'+p,{method:m,headers:{'Content-Type':'application/json',...(token?{Authorization:'Bearer '+token}:{})},body:b?JSON.stringify(b):undefined})}catch(e){throw new Error('Cannot reach the server. Check your connection.')}
 const j=await r.json().catch(()=>({}));
@@ -137,7 +138,13 @@ nav:d=>nav(d.v,{m:d.m,id:d.id}),
 back:()=>{S=hist.pop()||{v:'home',p:{}};render()},
 pick:d=>nav(S.p.m=='pay'?'pay':S.p.m=='utang'?'utang':'customer',{id:d.id}),
 tp:(d,t)=>{const i=t.previousElementSibling;i.type=i.type=='password'?'text':'password';t.textContent=i.type=='password'?'Show':'Hide'},
-async notif(){try{const r=await Notification.requestPermission();ok(r=='granted'?'Notifications enabled. You will be alerted when a payment is overdue while the app is open.':'Notifications are blocked. You will still see in-app overdue alerts.')}catch(e){ok('This browser does not support notifications. You will still see in-app overdue alerts.')}},
+async notif(){try{
+if(!('serviceWorker' in navigator)||!('PushManager' in window))return ok('This browser cannot receive push notifications. On iPhone, add the app to the Home Screen first.');
+if(await Notification.requestPermission()!=='granted')return ok('Notifications are blocked. Allow them in your browser settings, then try again.');
+const reg=await navigator.serviceWorker.ready,{key}=await api('GET','/push/key');
+const sub=(await reg.pushManager.getSubscription())||await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:b64(key)});
+await api('POST','/push/subscribe',sub.toJSON());await api('POST','/push/test');
+ok('Notifications enabled! You will get due-date alerts even when the app is closed.')}catch(e){ok(e.message||'Could not enable notifications.')}},
 toSignup:()=>rep('signup'),toLogin:()=>rep('login'),forgot:()=>nav('forgot'),
 login:()=>run(async()=>{const phone=(lp()&&!S.p.other)?lp():g('ph').replace(/\D/g,'');const r=await api('POST','/auth/login',{phone,pin:g('pin')});sess(r.token);try{localStorage.setItem('lp',phone)}catch(e){}await load();home()}),
 other:()=>{S.p.other=1;render()},
