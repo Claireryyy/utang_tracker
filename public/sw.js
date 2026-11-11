@@ -1,5 +1,5 @@
-const CACHE = 'utang-shell-v2';
-const SHELL = ['/', '/manifest.json', '/icon-192.png', '/icon-512.png'];
+const CACHE = 'utang-shell-v3';
+const SHELL = ['/', '/manifest.json', '/icon-192.png', '/icon-512.png', '/logo.png'];
  
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL)));
