@@ -2,7 +2,7 @@ const express = require('express');
 const { z } = require('zod');
 const pool = require('../db');
 const auth = require('../middleware/auth');
-const { checkDue, sendToOwner } = require('../jobs/duereminders');
+const { checkDue, sendToOwner } = require('../jobs/dueReminders');
  
 const router = express.Router();
 router.use(auth);
@@ -11,15 +11,15 @@ const subSchema = z.object({
   endpoint: z.string().url().max(1000),
   keys: z.object({ p256dh: z.string().max(200), auth: z.string().max(100) }),
 });
-
-
+ 
+// GET /api/push/key  -> the public key the phone needs to subscribe
 router.get('/key', (req, res) => {
   if (!process.env.VAPID_PUBLIC_KEY)
     return res.status(503).json({ error: 'Notifications are not set up on the server yet.' });
   res.json({ key: process.env.VAPID_PUBLIC_KEY });
 });
-
-
+ 
+// POST /api/push/subscribe
 router.post('/subscribe', async (req, res) => {
   const p = subSchema.safeParse(req.body);
   if (!p.success) return res.status(400).json({ error: 'Invalid subscription.' });
@@ -31,6 +31,17 @@ router.post('/subscribe', async (req, res) => {
     [req.ownerId, endpoint, keys.p256dh, keys.auth]
   );
   res.status(201).json({ message: 'Subscribed.' });
+});
+ 
+// DELETE /api/push/subscribe  -> turn notifications off for one device
+router.delete('/subscribe', async (req, res) => {
+  const p = z.object({ endpoint: z.string().max(1000) }).safeParse(req.body);
+  if (!p.success) return res.status(400).json({ error: 'Invalid request.' });
+  await pool.query('DELETE FROM push_subscriptions WHERE endpoint = $1 AND owner_id = $2', [
+    p.data.endpoint,
+    req.ownerId,
+  ]);
+  res.json({ message: 'Unsubscribed.' });
 });
  
 // POST /api/push/test  -> sends a test notification to this owner's devices

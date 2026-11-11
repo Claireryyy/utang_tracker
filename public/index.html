@@ -7,8 +7,8 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Utang Tracker">
-<link rel="icon" href="/icon-192.png">
-<link rel="apple-touch-icon" href="/icon-192.png">
+<link rel="icon" href="/icon-192.png?v=2">
+<link rel="apple-touch-icon" href="/icon-192.png?v=2">
 <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700&display=swap" rel="stylesheet">
 <style>
 :root{--bg:#e9f1ee;--card:#fff;--ink:#12302b;--mut:#5d7570;--pri:#0b6e5f;--onpri:#fff;--yel:#ffc933;--red:#c9302c;--ok:#1d7a46;--bd:#d3e0dc;--tint:#f3f8f6;color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
@@ -24,7 +24,7 @@ header h1{font-size:20px;font-weight:700}
 main{padding:16px}
 .auth{padding:56px 8px 0;text-align:center}.auth label{text-align:left}
 .logo{font-size:64px}.logo-img{display:block;width:120px;height:120px;margin:0 auto 8px}.auth h2{font-size:28px;margin:6px 0 28px;color:var(--pri)}
-.hi{font-size:28px;margin:6px 0 14px}.av{width:96px;height:96px;border-radius:50%;object-fit:cover;border:3px solid var(--yel);vertical-align:middle}
+.hi{font-size:28px;margin:6px 0 14px}.swrow{display:flex;justify-content:space-between;align-items:center;gap:12px;background:var(--card);border:2px solid var(--bd);border-radius:14px;padding:14px 16px;margin:12px 0}.swrow small{display:block;color:var(--mut);margin-top:2px}.sw{position:relative;width:68px;height:38px;border:0;border-radius:99px;background:var(--mut);cursor:pointer;flex:none}.sw span{position:absolute;top:4px;left:4px;width:30px;height:30px;border-radius:50%;background:#fff;transition:left .15s}.sw[aria-checked="true"]{background:var(--ok)}.sw[aria-checked="true"] span{left:34px}.av{width:96px;height:96px;border-radius:50%;object-fit:cover;border:3px solid var(--yel);vertical-align:middle}
 .total{background:var(--pri);color:var(--onpri);border-radius:18px;padding:18px 20px;border-bottom:8px solid var(--yel);margin-bottom:16px}
 .total small{display:block;opacity:.85}.total b{display:block;font:700 44px/1.1 "Baloo 2",sans-serif}.total span{opacity:.85;font-size:14px}
 .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
@@ -68,6 +68,11 @@ const toLocal=v=>{const d=new Date(v);return new Date(d-d.getTimezoneOffset()*6e
 const iso=v=>{const d=new Date(v);return isNaN(d)?'':d.toISOString()};
 const run=f=>f().catch(e=>ok(e.message));
 const b64=s=>{const r=atob((s+'='.repeat((4-s.length%4)%4)).replace(/-/g,'+').replace(/_/g,'/'));return Uint8Array.from([...r].map(c=>c.charCodeAt(0)))};
+const setN=st=>{try{localStorage.setItem('notif',st==='on'?'on':'off')}catch(e){}};
+const nOn=()=>{try{return localStorage.getItem('notif')==='on'}catch(e){return false}};
+async function pushState(){try{if(!('serviceWorker' in navigator)||!('PushManager' in window))return'unsupported';if(Notification.permission==='denied')return'blocked';const reg=await navigator.serviceWorker.ready;return(await reg.pushManager.getSubscription())&&Notification.permission==='granted'?'on':'off'}catch(e){return'off'}}
+async function syncSw(){const st=await pushState();setN(st);const b=$('#nsw'),t=$('#nsub');if(!b||!t)return;b.setAttribute('aria-checked',st==='on');t.textContent={on:'ON: alerts come to this device, even when the app is closed.',off:'OFF: no due-date alerts on this device.',blocked:'Blocked in your browser settings. Allow notifications for this site, then try again.',unsupported:'This browser cannot receive notifications. On iPhone, add the app to the Home Screen first.'}[st]}
+const fmtPh=s=>s.replace(/^(\d{4})(\d{3})(\d{4})$/,'$1 $2 $3');
 const lp=()=>{try{return localStorage.getItem('lp')||''}catch(e){return''}};
 async function api(m,p,b){let r;try{r=await fetch('/api'+p,{method:m,headers:{'Content-Type':'application/json',...(token?{Authorization:'Bearer '+token}:{})},body:b?JSON.stringify(b):undefined})}catch(e){throw new Error('Cannot reach the server. Check your connection.')}
 const j=await r.json().catch(()=>({}));
@@ -94,17 +99,17 @@ function modal(msg,btns){const m=$('#modal');m.innerHTML=`<div class="box"><p>${
 const ok=(m,f)=>modal(m,[{t:'OK',f}]);
 const nav=(v,p={})=>{hist.push(S);S={v,p};render();scrollTo(0,0)};
 const rep=(v,p={})=>{S={v,p};render();scrollTo(0,0)};
-const home=()=>{hist=[];S={v:'home',p:{}};render();checkDue()};
+const home=()=>{hist=[];S={v:'home',p:{}};render();pushState().then(st=>{setN(st);checkDue()})};
 const fmtDT=d=>new Date(d).toLocaleString('en-PH',{month:'short',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit'});
 const defDue=()=>{const d=new Date(Date.now()+7*864e5);d.setHours(18,0,0,0);return new Date(d-d.getTimezoneOffset()*6e4).toISOString().slice(0,16)};
 const isOver=c=>bal(c.id)>0&&c.due&&new Date(c.due)<=new Date();
 const toCust=id=>{const i=hist.map(h=>h.v==='customer'&&h.p.id===id).lastIndexOf(true);if(i<0)return rep('customer',{id});S=hist[i];S.p.edit=0;hist=hist.slice(0,i);render();scrollTo(0,0)};
-function checkDue(){if(!db.owner||['splash','login','signup','forgot','resetpin'].includes(S.v)||!$('#modal').hidden)return;const n=db.customers.filter(c=>isOver(c)&&seen[c.id]!==c.due);if(!n.length)return;n.forEach(c=>seen[c.id]=c.due);const pl=n.map(c=>`${c.name} (${peso(bal(c.id))})`).join(', ');try{if(Notification.permission==='granted')new Notification('Utang past due',{body:pl})}catch(e){}modal('Payment overdue: '+esc(pl),[{t:'OK'}])}
+function checkDue(){if(!nOn()||!db.owner||['splash','login','signup','forgot','resetpin'].includes(S.v)||!$('#modal').hidden)return;const n=db.customers.filter(c=>isOver(c)&&seen[c.id]!==c.due);if(!n.length)return;n.forEach(c=>seen[c.id]=c.due);const pl=n.map(c=>`${c.name} (${peso(bal(c.id))})`).join(', ');try{if(Notification.permission==='granted')new Notification('Utang past due',{body:pl})}catch(e){}modal('Payment overdue: '+esc(pl),[{t:'OK'}])}
 setInterval(checkDue,30000);
 const tiles=[['➕','Add Utang','pick','utang'],['👥','Customers','pick','view'],['🆕','Add Customer','addc'],['💵','Payment','pick','pay'],['🧾','History','hist'],['⚙️','Settings','sett']];
 const V={
 splash:()=>({nohead:1,h:`<div class="auth" style="padding-top:140px"><img class="logo-img" src="/logo.png" alt="Sari-Sari Store Utang Tracker"><h2>Sari-Sari Store<br>Utang Tracker</h2><p>Welcome!</p></div>`}),
-login:()=>({nohead:1,h:`<div class="auth"><img class="logo-img" src="/logo.png" alt="Sari-Sari Store Utang Tracker"><h2>Sari-Sari Store<br>Utang Tracker</h2>${lp()&&!S.p.other?`<p style="margin:0 0 14px">Welcome back! <b>${esc(lp().slice(0,4))}•••${esc(lp().slice(-3))}</b></p>`:fld('ph','Contact number','','type="tel" autocomplete="username" placeholder="09XX XXX XXXX"')}${pinF('pin','PIN').replace('<input','<input data-e="login"')}<button class="btn" data-a="login">Log in</button><p class="link"><a href="#" data-a="forgot">Forgot PIN?</a></p>${lp()?(S.p.other?`<p class="link"><a href="#" data-a="same">← Back to ${esc(lp().slice(0,4))}•••${esc(lp().slice(-3))}</a></p>`:'<p class="link"><a href="#" data-a="other">Not you? Use another number</a></p>'):''}<p class="link">New here? <a href="#" data-a="toSignup">Sign up</a></p></div>`}),
+login:()=>({nohead:1,h:`<div class="auth"><img class="logo-img" src="/logo.png" alt="Sari-Sari Store Utang Tracker"><h2>Sari-Sari Store<br>Utang Tracker</h2>${lp()&&!S.p.other?`<p style="margin:0 0 14px">Welcome back!<br><b style="font-size:22px">${esc(fmtPh(lp()))}</b></p>`:fld('ph','Contact number','','type="tel" autocomplete="username" placeholder="09XX XXX XXXX"')}${pinF('pin','PIN').replace('<input','<input data-e="login"')}<button class="btn" data-a="login">Log in</button><p class="link"><a href="#" data-a="forgot">Forgot PIN?</a></p>${lp()?(S.p.other?`<p class="link"><a href="#" data-a="same">← Back to ${esc(fmtPh(lp()))}</a></p>`:'<p class="link"><a href="#" data-a="other">Not you? Use another number</a></p>'):''}<p class="link">New here? <a href="#" data-a="toSignup">Sign up</a></p></div>`}),
 signup:()=>({nohead:1,h:`<div class="auth" style="padding-top:28px"><img class="logo-img" src="/logo.png" alt="Sari-Sari Store Utang Tracker"><h2>Sign up</h2>${fld('n','Name','','placeholder="Enter name"')}${fld('a','Age','','type="number" inputmode="numeric" placeholder="Enter age"')}${fld('c','Contact number','','type="tel" placeholder="09XX XXX XXXX"')}${pinF('p1','Create 4-digit PIN')}${pinF('p2','Retype PIN')}${fld('s','Recovery question: What is the name of your first pet?','','placeholder="Your answer"')}<button class="btn" data-a="signup">Sign up</button><p class="link"><a href="#" data-a="toLogin">Back to log in</a></p></div>`}),
 home:()=>{const t=db.customers.reduce((s,c)=>s+bal(c.id),0),owing=db.customers.filter(c=>bal(c.id)>0),top=[...owing].sort((a,b)=>bal(b.id)-bal(a.id)).slice(0,3),over=owing.filter(isOver);
 return{nohead:1,h:`<h2 class="hi">Hello, ${esc(cap(db.owner.name.split(' ')[0]))}!</h2><div class="total"><small>Total utang</small><b>${peso(t)}</b><span>${owing.length} customer${owing.length==1?'':'s'} with pending utang</span></div>${over.length?`<div class="alert"><b>${over.length} payment${over.length==1?'':'s'} overdue</b>${over.map(c=>`<button class="row" data-a="nav" data-v="customer" data-id="${c.id}"><span>${esc(c.name)}</span><span class="r">${peso(bal(c.id))}</span></button>`).join('')}</div>`:''}<div class="grid">${tiles.map(x=>`<button class="tile" data-a="nav" data-v="${x[2]}" data-m="${x[3]||''}"><i>${x[1]&&x[0]}</i>${x[1]}</button>`).join('')}</div>${top.length?`<h3>Biggest balances</h3>${top.map(c=>`<button class="row" data-a="nav" data-v="customer" data-id="${c.id}"><span>${esc(c.name)}</span><span class="r">${peso(bal(c.id))}</span></button>`).join('')}`:`<p class="empty">No pending utang. Add a customer to get started.</p>`}`}},
@@ -120,7 +125,7 @@ addc:()=>({t:'Add Customer',h:`${fld('n','Name','','placeholder="Customer name"'
 utang:()=>{const c=cust(S.p.id),b=bal(c.id);return{t:'Add Utang To',h:`<div class="who"><div>👤</div><div><b>${esc(c.name)}</b><small>📞 ${esc(c.phone||'No number')}</small></div></div><div class="cur"><div><small>Current utang</small><div class="big">${peso(b)}</div></div>${pill(b)}</div><h3 style="margin-top:4px">Details of utang</h3>${fld('i','List of orders','','placeholder="e.g. rice, sardines, soap"')}${fld('d','Date',today(),'type="date"')}${fld('amt','Amount of utang','','type="number" inputmode="decimal" min="0" placeholder="₱0"')}${fld('due','Payment due (date & time)',b>0&&c.due?c.due:defDue(),'type="datetime-local"')}<button class="btn" data-a="saveU" data-id="${c.id}">Save</button>`}},
 pay:()=>{const c=cust(S.p.id),b=bal(c.id);return{t:'Payment',h:`<div class="who"><div>👤</div><div><b>${esc(c.name)}</b><small>📞 ${esc(c.phone||'No number')}</small></div></div><div class="cur"><div><small>Current utang</small><div class="big">${peso(b)}</div></div>${pill(b)}</div>${fld('amt','How much is the payment?','','type="number" inputmode="decimal" min="0" placeholder="₱0"')}<button class="chip" data-a="full" data-v="${b}">Pay full ${peso(b)}</button>${fld('d','Date',today(),'type="date"')}<button class="btn" data-a="savePay" data-id="${c.id}">Record payment</button>`}},
 hist:()=>({t:'Transaction History',h:`<label><input id="hq" type="search" placeholder="Search by name or note" style="margin:0"></label><div id="hl">${hrows()}</div>`}),
-sett:()=>({t:'Settings',h:`<button class="btn" data-a="nav" data-v="prof">Owner’s profile</button><button class="btn sec" data-a="notif">Enable due-date notifications</button><button class="btn sec" data-a="logout">Log out</button>`}),
+sett:()=>({t:'Settings',h:`<button class="btn" data-a="nav" data-v="prof">Owner’s profile</button><div class="swrow"><div><b>Due-date notifications</b><small id="nsub">Checking…</small></div><button class="sw" id="nsw" role="switch" aria-checked="false" aria-label="Due-date notifications" data-a="notif"><span></span></button></div><button class="btn sec" data-a="logout">Log out</button>`}),
 prof:()=>{const o=db.owner;return{t:'Owner’s Profile',h:`<div style="text-align:center;font-size:72px;margin-bottom:8px">${av()}</div><div class="pr"><span>Name</span><b>${esc(o.name)}</b></div><div class="pr"><span>Age</span><b>${esc(o.age)}</b></div><div class="pr"><span>Contact no.</span><b>${esc(o.phone)}</b></div><div class="pr"><span>PIN</span><b>••••</b></div><button class="btn" data-a="nav" data-v="editp" style="margin-top:18px">Edit</button><button class="btn sec" data-a="nav" data-v="pin">Change PIN</button>`}},
 editp:()=>{const o=db.owner;newPhoto=null;return{t:'Edit Profile',h:`<div style="text-align:center;margin-bottom:12px"><div id="pv" style="font-size:72px">${av()}</div><label class="btn sec" style="margin-top:8px">Attach photo<input id="pf" type="file" accept="image/*" style="display:none"></label></div>${fld('n','Name',o.name)}${fld('a','Age',o.age,'type="number" inputmode="numeric"')}${fld('c','Contact number',o.phone,'type="tel"')}<button class="btn" data-a="saveP">Save</button>`}},
 pin:()=>({t:'Change PIN',h:`${pinF('p0','Current PIN')}${pinF('p1','New 4-digit PIN')}${pinF('p2','Confirm new PIN')}<button class="btn" data-a="savePin">Change and save</button>`}),
@@ -131,7 +136,7 @@ function txRow(x){const c=cust(x.cid);return`<div class="tx"><div><b>${esc(c?c.n
 function rows(){const q=(S.p.q||'').toLowerCase(),m=S.p.m;let l=db.customers.filter(c=>c.name.toLowerCase().includes(q));if(m=='pay')l=l.filter(c=>bal(c.id)>0);l.sort((a,b)=>a.name.localeCompare(b.name));
 return l.length?l.map(c=>{const b=bal(c.id);return`<button class="row" data-a="pick" data-id="${c.id}"><span>${esc(c.name)}</span><span class="r"${b>0?'':' style="color:var(--mut);font-weight:400"'}>${b>0?peso(b)+(isOver(c)?' ⚠':''):'No due'}</span></button>`}).join(''):`<p class="empty">${m=='pay'?'Nobody owes you right now.':db.customers.length?'No customers match your search.':(m=='utang'?'No customers yet. Tap “Add customer” below.':'No customers yet. Use “Add Customer” on the home screen.')}</p>`}
 function hrows(){const q=g('hq').toLowerCase(),l=[...db.txs].reverse().sort((a,b)=>b.date.localeCompare(a.date)).filter(x=>(!q||((cust(x.cid)||{}).name||'').toLowerCase().includes(q)||(x.note||'').toLowerCase().includes(q)));return l.length?l.map(txRow).join(''):'<p class="empty">No transactions to show.</p>'}
-function render(){const v=(V[S.v]||V.login)();$('#app').innerHTML=(v.nohead?'':`<header>${hist.length||S.v=='customer'?'<button class="ib" data-a="back" aria-label="Back">←</button>':''}<h1>${v.t}</h1></header>`)+`<main>${v.h}</main>`}
+function render(){const v=(V[S.v]||V.login)();$('#app').innerHTML=(v.nohead?'':`<header>${hist.length||S.v=='customer'?'<button class="ib" data-a="back" aria-label="Back">←</button>':''}<h1>${v.t}</h1></header>`)+`<main>${v.h}</main>`;if(S.v==='sett')syncSw()}
 let newPhoto=null;const av=(p=db.owner&&db.owner.photo)=>p?`<img class="av" src="${p}" alt="Owner photo">`:'👤';
 const A={
 nav:d=>nav(d.v,{m:d.m,id:d.id}),
@@ -139,12 +144,14 @@ back:()=>{S=hist.pop()||{v:'home',p:{}};render()},
 pick:d=>nav(S.p.m=='pay'?'pay':S.p.m=='utang'?'utang':'customer',{id:d.id}),
 tp:(d,t)=>{const i=t.previousElementSibling;i.type=i.type=='password'?'text':'password';t.textContent=i.type=='password'?'Show':'Hide'},
 async notif(){try{
-if(!('serviceWorker' in navigator)||!('PushManager' in window))return ok('This browser cannot receive push notifications. On iPhone, add the app to the Home Screen first.');
-if(await Notification.requestPermission()!=='granted')return ok('Notifications are blocked. Allow them in your browser settings, then try again.');
-const reg=await navigator.serviceWorker.ready,{key}=await api('GET','/push/key');
+if(!('serviceWorker' in navigator)||!('PushManager' in window))return ok('This browser cannot receive notifications. On iPhone, add the app to the Home Screen first.');
+const reg=await navigator.serviceWorker.ready,on=$('#nsw')&&$('#nsw').getAttribute('aria-checked')==='true';
+if(on){const sub=await reg.pushManager.getSubscription();if(sub){await api('DELETE','/push/subscribe',{endpoint:sub.endpoint});await sub.unsubscribe()}await syncSw();return ok('Notifications are OFF on this device. You will not get due-date alerts.')}
+if(await Notification.requestPermission()!=='granted'){await syncSw();return ok('Notifications are blocked. Allow them in your browser settings, then try again.')}
+const{key}=await api('GET','/push/key');
 const sub=(await reg.pushManager.getSubscription())||await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:b64(key)});
-await api('POST','/push/subscribe',sub.toJSON());await api('POST','/push/test');
-ok('Notifications enabled! You will get due-date alerts even when the app is closed.')}catch(e){ok(e.message||'Could not enable notifications.')}},
+await api('POST','/push/subscribe',sub.toJSON());await api('POST','/push/test');await syncSw();
+ok('Notifications are ON! You will get due-date alerts even when the app is closed.')}catch(e){await syncSw();ok(e.message||'Could not change notifications.')}},
 toSignup:()=>rep('signup'),toLogin:()=>rep('login'),forgot:()=>nav('forgot'),
 login:()=>run(async()=>{const phone=(lp()&&!S.p.other)?lp():g('ph').replace(/\D/g,'');const r=await api('POST','/auth/login',{phone,pin:g('pin')});sess(r.token);try{localStorage.setItem('lp',phone)}catch(e){}await load();home()}),
 other:()=>{S.p.other=1;render()},
