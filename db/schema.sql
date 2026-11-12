@@ -5,7 +5,9 @@ CREATE TABLE owners (
   phone TEXT NOT NULL UNIQUE,
   pin_hash TEXT NOT NULL,
   recovery_hash TEXT NOT NULL,
-  photo_url TEXT
+  photo_url TEXT,
+  is_demo BOOLEAN NOT NULL DEFAULT false,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
 CREATE TABLE customers (
@@ -15,6 +17,8 @@ CREATE TABLE customers (
   phone TEXT,
   due_at TIMESTAMPTZ,
   last_alert_due TIMESTAMPTZ,
+  notified_soon_for TIMESTAMPTZ,
+  last_overdue_reminder DATE,
   UNIQUE (owner_id, name)
 );
 
@@ -36,8 +40,3 @@ CREATE TABLE push_subscriptions (
   auth TEXT NOT NULL,
   created_at TIMESTAMPTZ DEFAULT now()
 );
-
-ALTER TABLE customers ADD COLUMN notified_soon_for TIMESTAMPTZ;
-ALTER TABLE customers ADD COLUMN last_overdue_reminder DATE;
-ALTER TABLE owners ADD COLUMN IF NOT EXISTS is_demo BOOLEAN NOT NULL DEFAULT false;
-ALTER TABLE owners ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT now();

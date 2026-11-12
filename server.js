@@ -6,6 +6,7 @@ const pool = require('./db');
 const auth = require('./middleware/auth');
 
 const app = express();
+app.set('trust proxy', 1);
 app.use(helmet({ contentSecurityPolicy: false }));
 app.use(express.json({ limit: '400kb' }));
 app.use(express.static(path.join(__dirname, 'public')));
@@ -43,7 +44,7 @@ app.use((err, req, res, next) => {
 
 const cron = require('node-cron');
 const { checkDue } = require('./jobs/dueReminders');
-cron.schedule('*/5 * * * *', () => checkDue().catch(console.error));
+cron.schedule('*/15 * * * *', () => checkDue().catch(console.error));
 cron.schedule('0 * * * *', () =>
      pool.query("DELETE FROM owners WHERE is_demo AND created_at < now() - interval '24 hours'").catch(console.error)
    );
