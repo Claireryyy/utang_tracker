@@ -5,6 +5,18 @@ const auth = require('../middleware/auth');
 
 const router = express.Router();
 router.use(auth);
+async function demoCap(req, res, next) {
+  if (!req.isDemo) return next();
+  const q = await pool.query(
+    `SELECT (SELECT COUNT(*) FROM customers WHERE owner_id = $1)::int AS c,
+            (SELECT COUNT(*) FROM transactions t JOIN customers c ON c.id = t.customer_id
+              WHERE c.owner_id = $1)::int AS t`,
+    [req.ownerId]
+  );
+  if (q.rows[0].c >= 15 || q.rows[0].t >= 80)
+    return res.status(400).json({ error: 'This demo is full. Log out and start a new demo to keep trying.' });
+  next();
+}
 router.param('id', (req, res, next, v) =>
   /^\d+$/.test(v) ? next() : res.status(400).json({ error: 'Invalid id.' })
 );
@@ -89,7 +101,7 @@ router.get('/:id', async (req, res) => {
 });
 
 // POST /api/customers  (customer + first utang together)
-router.post('/', async (req, res) => {
+router.post('/', demoCap, async (req, res) => {
   const p = newCustomer.safeParse(req.body);
   if (!p.success) return fail(res, p);
   const d = p.data;
@@ -142,7 +154,7 @@ router.delete('/:id', async (req, res) => {
 });
 
 // POST /api/customers/:id/utang
-router.post('/:id/utang', async (req, res) => {
+router.post('/:id/utang', demoCap, async (req, res) => {
   const p = newUtang.safeParse(req.body);
   if (!p.success) return fail(res, p);
   const d = p.data;
@@ -163,7 +175,7 @@ router.post('/:id/utang', async (req, res) => {
 });
 
 // POST /api/customers/:id/payments
-router.post('/:id/payments', async (req, res) => {
+router.post('/:id/payments', demoCap, async (req, res) => {
   const p = newPayment.safeParse(req.body);
   if (!p.success) return fail(res, p);
   const d = p.data;

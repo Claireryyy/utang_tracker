@@ -39,3 +39,5 @@ CREATE TABLE push_subscriptions (
 
 ALTER TABLE customers ADD COLUMN notified_soon_for TIMESTAMPTZ;
 ALTER TABLE customers ADD COLUMN last_overdue_reminder DATE;
+ALTER TABLE owners ADD COLUMN IF NOT EXISTS is_demo BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE owners ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT now();

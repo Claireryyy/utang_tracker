@@ -8,6 +8,7 @@ module.exports = function auth(req, res, next) {
     const p = jwt.verify(token, process.env.JWT_SECRET);
     if (p.purpose !== 'session') throw new Error('wrong token type');
     req.ownerId = Number(p.sub);
+    req.isDemo = p.demo === true;
     next();
   } catch {
     res.status(401).json({ error: 'Session expired. Please log in again.' });

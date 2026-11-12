@@ -26,10 +26,11 @@ app.use('/api/customers', require('./routes/customers'));
 app.use('/api/transactions', require('./routes/transactions'));
 app.use('/api/owner', require('./routes/owners'));
 app.use('/api/push', require('./routes/push'));
+app.use('/api/demo', require('./routes/demo'));
 
 app.get('/api/me', auth, async (req, res) => {
   const q = await pool.query(
-    'SELECT id, name, age, phone, photo_url FROM owners WHERE id = $1',
+    'SELECT id, name, age, phone, photo_url, is_demo FROM owners WHERE id = $1',
     [req.ownerId]
   );
   res.json(q.rows[0]);
@@ -41,8 +42,11 @@ app.use((err, req, res, next) => {
 });
 
 const cron = require('node-cron');
-const { checkDue } = require('./jobs/duereminders');
+const { checkDue } = require('./jobs/dueReminders');
 cron.schedule('*/5 * * * *', () => checkDue().catch(console.error));
+cron.schedule('0 * * * *', () =>
+     pool.query("DELETE FROM owners WHERE is_demo AND created_at < now() - interval '24 hours'").catch(console.error)
+   );
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 
