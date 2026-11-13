@@ -71,7 +71,7 @@ router.post('/login', loginLimiter, async (req, res) => {
   const owner = q.rows[0];
   const ok = owner && (await bcrypt.compare(r.data.pin, owner.pin_hash));
   if (!ok) return res.status(401).json({ error: 'Incorrect contact number or PIN.' });
-  res.json({ token: sign(owner.id, 'session', '12h'), name: owner.name });
+  res.json({ token: sign(owner.id, 'session', '365d'), name: owner.name });
 });
 
 // POST /api/auth/forgot/verify

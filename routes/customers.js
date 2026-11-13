@@ -2,9 +2,14 @@ const express = require('express');
 const { z } = require('zod');
 const pool = require('../db');
 const auth = require('../middleware/auth');
-
+ 
 const router = express.Router();
 router.use(auth);
+router.param('id', (req, res, next, v) =>
+  /^\d+$/.test(v) ? next() : res.status(400).json({ error: 'Invalid id.' })
+);
+ 
+// Demo accounts are capped so nobody can fill the database
 async function demoCap(req, res, next) {
   if (!req.isDemo) return next();
   const q = await pool.query(
@@ -17,10 +22,7 @@ async function demoCap(req, res, next) {
     return res.status(400).json({ error: 'This demo is full. Log out and start a new demo to keep trying.' });
   next();
 }
-router.param('id', (req, res, next, v) =>
-  /^\d+$/.test(v) ? next() : res.status(400).json({ error: 'Invalid id.' })
-);
-
+ 
 const money = z.coerce
   .number()
   .positive('Enter an amount greater than zero.')
@@ -36,16 +38,17 @@ const note = z
   .max(200, 'The list of orders is too long (200 characters max).');
 const phone = z.string().trim().max(30).default('');
 const name = z.string().trim().min(1, 'Please enter the customer’s name.').max(80);
-
-const newCustomer = z.object({ name, phone, note, date: day, amount: money, dueAt });
-const newUtang = z.object({ note, date: day, amount: money, dueAt });
-const newPayment = z.object({ amount: money, date: day });
+const clientId = z.string().max(64).optional(); // unique id made by the phone, so a retry never saves twice
+ 
+const newCustomer = z.object({ name, phone, note, date: day, amount: money, dueAt, clientId });
+const newUtang = z.object({ note, date: day, amount: money, dueAt, clientId });
+const newPayment = z.object({ amount: money, date: day, clientId });
 const editCustomer = z.object({ name, phone, dueAt: dueAt.optional() });
-
+ 
 const fail = (res, p) => res.status(400).json({ error: p.error.issues[0].message });
 const round2 = (n) => Math.round(n * 100) / 100;
 const isOver = (balance, due) => Boolean(balance > 0 && due && new Date(due) <= new Date());
-
+ 
 async function withTx(fn) {
   const client = await pool.connect();
   try {
@@ -62,7 +65,15 @@ async function withTx(fn) {
 }
 const send = (res, out) => res.status(out.status).json(out.error ? { error: out.error } : out.body);
 const dupName = (res) => res.status(409).json({ error: 'A customer with this name already exists.' });
-
+const alreadySaved = async (client, ownerId, cid) =>
+  (
+    await client.query(
+      `SELECT 1 FROM transactions t JOIN customers c ON c.id = t.customer_id
+        WHERE t.client_id = $1 AND c.owner_id = $2`,
+      [cid, ownerId]
+    )
+  ).rowCount > 0;
+ 
 // GET /api/customers?search=
 router.get('/', async (req, res) => {
   const s = String(req.query.search || '').trim().replace(/[\\%_]/g, '\\$&');
@@ -78,7 +89,7 @@ router.get('/', async (req, res) => {
     q.rows.map((r) => ({ ...r, balance: round2(r.balance), overdue: isOver(r.balance, r.due_at) }))
   );
 });
-
+ 
 // GET /api/customers/:id
 router.get('/:id', async (req, res) => {
   const c = await pool.query(
@@ -99,7 +110,7 @@ router.get('/:id', async (req, res) => {
   const balance = round2(r.total_utang - r.total_paid);
   res.json({ ...r, balance, overdue: isOver(balance, r.due_at), transactions: t.rows });
 });
-
+ 
 // POST /api/customers  (customer + first utang together)
 router.post('/', demoCap, async (req, res) => {
   const p = newCustomer.safeParse(req.body);
@@ -112,8 +123,9 @@ router.post('/', demoCap, async (req, res) => {
         [req.ownerId, d.name, d.phone, d.dueAt]
       );
       await client.query(
-        `INSERT INTO transactions (customer_id, type, amount, tx_date, note) VALUES ($1,'utang',$2,$3,$4)`,
-        [c.rows[0].id, d.amount, d.date, d.note || null]
+        `INSERT INTO transactions (customer_id, type, amount, tx_date, note, client_id)
+         VALUES ($1,'utang',$2,$3,$4,$5) ON CONFLICT (client_id) DO NOTHING`,
+        [c.rows[0].id, d.amount, d.date, d.note, d.clientId || null]
       );
       return { status: 201, body: { id: c.rows[0].id, message: 'Saved information.' } };
     });
@@ -123,7 +135,7 @@ router.post('/', demoCap, async (req, res) => {
     throw e;
   }
 });
-
+ 
 // PUT /api/customers/:id
 router.put('/:id', async (req, res) => {
   const p = editCustomer.safeParse(req.body);
@@ -142,7 +154,7 @@ router.put('/:id', async (req, res) => {
     throw e;
   }
 });
-
+ 
 // DELETE /api/customers/:id
 router.delete('/:id', async (req, res) => {
   const q = await pool.query('DELETE FROM customers WHERE id=$1 AND owner_id=$2', [
@@ -152,7 +164,7 @@ router.delete('/:id', async (req, res) => {
   if (!q.rowCount) return res.status(404).json({ error: 'Customer not found.' });
   res.json({ message: 'Deleted.' });
 });
-
+ 
 // POST /api/customers/:id/utang
 router.post('/:id/utang', demoCap, async (req, res) => {
   const p = newUtang.safeParse(req.body);
@@ -164,16 +176,19 @@ router.post('/:id/utang', demoCap, async (req, res) => {
       req.ownerId,
     ]);
     if (!own.rowCount) return { status: 404, error: 'Customer not found.' };
+    if (d.clientId && (await alreadySaved(client, req.ownerId, d.clientId)))
+      return { status: 200, body: { message: 'Already saved.' } };
     await client.query(
-      `INSERT INTO transactions (customer_id, type, amount, tx_date, note) VALUES ($1,'utang',$2,$3,$4)`,
-      [req.params.id, d.amount, d.date, d.note || null]
+      `INSERT INTO transactions (customer_id, type, amount, tx_date, note, client_id)
+       VALUES ($1,'utang',$2,$3,$4,$5)`,
+      [req.params.id, d.amount, d.date, d.note, d.clientId || null]
     );
     await client.query('UPDATE customers SET due_at=$1 WHERE id=$2', [d.dueAt, req.params.id]);
     return { status: 201, body: { message: 'New utang added!' } };
   });
   send(res, out);
 });
-
+ 
 // POST /api/customers/:id/payments
 router.post('/:id/payments', demoCap, async (req, res) => {
   const p = newPayment.safeParse(req.body);
@@ -185,6 +200,8 @@ router.post('/:id/payments', demoCap, async (req, res) => {
       req.ownerId,
     ]);
     if (!own.rowCount) return { status: 404, error: 'Customer not found.' };
+    if (d.clientId && (await alreadySaved(client, req.ownerId, d.clientId)))
+      return { status: 200, body: { message: 'Already saved.' } };
     const b = await client.query(
       `SELECT COALESCE(SUM(CASE type WHEN 'utang' THEN amount ELSE -amount END),0)::text AS bal
          FROM transactions WHERE customer_id=$1`,
@@ -195,13 +212,13 @@ router.post('/:id/payments', demoCap, async (req, res) => {
     if (amtC > balC)
       return { status: 400, error: `That is more than the pending utang of ₱${(balC / 100).toFixed(2)}.` };
     await client.query(
-      `INSERT INTO transactions (customer_id, type, amount, tx_date) VALUES ($1,'payment',$2,$3)`,
-      [req.params.id, d.amount, d.date]
+      `INSERT INTO transactions (customer_id, type, amount, tx_date, client_id) VALUES ($1,'payment',$2,$3,$4)`,
+      [req.params.id, d.amount, d.date, d.clientId || null]
     );
     if (amtC === balC) await client.query('UPDATE customers SET due_at=NULL WHERE id=$1', [req.params.id]);
     return { status: 201, body: { message: 'Payment successful!', balance: (balC - amtC) / 100 } };
   });
   send(res, out);
 });
-
+ 
 module.exports = router;

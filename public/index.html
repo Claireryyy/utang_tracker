@@ -16,7 +16,7 @@
 :root[data-theme="dark"]{--bg:#0e1b19;--card:#172927;--ink:#e8f3f0;--mut:#93aca6;--pri:#3cc2a8;--onpri:#06231e;--yel:#ffc933;--red:#ff7b74;--ok:#5fd18c;--bd:#27403c;--tint:#1c312e;color-scheme:dark}
 *,*:before,*:after{box-sizing:inherit}
 html,body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif}
-#app{max-width:480px;margin:0 auto;min-height:100vh;background:var(--bg);padding-bottom:40px}
+#app{max-width:480px;margin:0 auto;min-height:100vh;background:var(--bg);padding-bottom:64px}
 h1,h2,h3,.big{font-family:"Baloo 2",system-ui,sans-serif;margin:0;line-height:1.15}
 header{display:flex;align-items:center;gap:8px;padding:12px 14px;background:var(--pri);color:var(--onpri)}
 header h1{font-size:20px;font-weight:700}
@@ -43,7 +43,7 @@ input:focus,select:focus,button:focus-visible,a:focus-visible{outline:3px solid 
 .who b{font:700 22px "Baloo 2",sans-serif}.who small{color:var(--mut);display:block}.who .ib{margin-left:auto;background:var(--tint);color:var(--ink)}
 .cur{background:var(--card);border:2px solid var(--bd);border-radius:16px;padding:14px 16px;display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
 .cur .big{font-size:34px;font-weight:700}
-.pill{padding:3px 12px;border-radius:99px;font-size:13px;font-weight:700}.pill.p{background:var(--yel);color:#3a2d00}.pill.ok{background:var(--ok);color:#fff}.pill.od{background:var(--red);color:#fff}.due{margin:0 0 10px;color:var(--mut)}.due.od{color:var(--red)}.alert{background:var(--card);border:2px solid var(--red);border-radius:14px;padding:10px 12px;margin-bottom:14px}.alert>b{display:block;color:var(--red);margin-bottom:8px}.alert .row{margin-bottom:6px}.pw{position:relative}.pw input{padding-right:66px}input[type="password"]::-ms-reveal{display:none}
+.pill{padding:3px 12px;border-radius:99px;font-size:13px;font-weight:700}.pill.p{background:var(--yel);color:#3a2d00}.pill.ok{background:var(--ok);color:#fff}.pill.od{background:var(--red);color:#fff}.due{margin:0 0 10px;color:var(--mut)}.due.od{color:var(--red)}.alert{background:var(--card);border:2px solid var(--red);border-radius:14px;padding:10px 12px;margin-bottom:14px}.alert>b{display:block;color:var(--red);margin-bottom:8px}.alert .row{margin-bottom:6px}.pw{position:relative;display:block}#net{position:fixed;left:0;right:0;bottom:0;z-index:15;text-align:center;padding:8px 12px calc(8px + env(safe-area-inset-bottom,0px));font-size:14px;font-weight:600;background:#3a2d00;color:#ffc933}#net[hidden]{display:none}.pw input{padding-right:66px}input[type="password"]::-ms-reveal{display:none}
 .eye{position:absolute;right:4px;bottom:5px;border:0;background:none;color:var(--pri);font:700 14px system-ui,sans-serif;padding:8px;cursor:pointer}
 .sum{background:var(--card);border-radius:12px;padding:4px 14px;margin-bottom:10px}.sum div{display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--bd)}.sum div:last-child{border:0}
 .tx{display:flex;justify-content:space-between;gap:10px;padding:10px 2px;border-bottom:1px solid var(--bd)}.tx small{color:var(--mut);display:block}
@@ -56,14 +56,51 @@ input:focus,select:focus,button:focus-visible,a:focus-visible{outline:3px solid 
 .link{text-align:center;margin-top:18px;font-size:14px}.link a{color:var(--pri);font-weight:700}
 @media(prefers-reduced-motion:no-preference){.tile,.row,.btn{transition:transform .08s}.tile:active,.row:active,.btn:active{transform:scale(.97)}}
 </style></head><body>
-<div id="app"></div><div id="modal" hidden></div>
+<div id="app"></div><div id="modal" hidden></div><div id="net" hidden></div>
 <script>
 const $=s=>document.querySelector(s),g=id=>(($('#'+id)||{}).value||'').trim();
 let db,S={v:'splash',p:{}},hist=[],fails=0,lockT=0;
 db={owner:null,customers:[],txs:[]};
 let token=null,resetTok=null,newPhotoInit=null;const seen={};
-try{token=sessionStorage.getItem('tk')}catch(e){}
-const sess=t=>{token=t;try{t?sessionStorage.setItem('tk',t):sessionStorage.removeItem('tk')}catch(e){}};
+let outbox=[],syncing=false;const idMap={};
+try{outbox=JSON.parse(localStorage.getItem('outbox')||'[]')}catch(e){}
+const saveOutbox=()=>{try{localStorage.setItem('outbox',JSON.stringify(outbox))}catch(e){}};
+const saveSnap=()=>{try{localStorage.setItem('snap',JSON.stringify(db))}catch(e){}};
+function loadSnap(){try{const x=JSON.parse(localStorage.getItem('snap')||'null');if(x&&x.owner){db=x;return true}}catch(e){}return false}
+const clearLocal=()=>{try{['snap','outbox','snapOwner'].forEach(k=>localStorage.removeItem(k))}catch(e){}outbox=[]};
+const tmp=()=>'t_'+uid();
+function enq(op){outbox.push(op);saveOutbox();saveSnap();netUI();syncNow()}
+function netUI(){const n=$('#net');if(!n)return;const q=outbox.length,off=!navigator.onLine;
+if(!token||!(off||q||syncing)){n.hidden=true;return}
+n.hidden=false;n.textContent=off?(q?`Offline: ${q} change${q>1?'s':''} saved on this phone. They will sync when you are online.`:'Offline: you can keep working. Changes are saved on this phone.'):syncing?'Syncing…':`${q} change${q>1?'s':''} waiting to sync…`}
+function adopt(t,real){idMap[t]=real;outbox.forEach(o=>{o.path=o.path.split(t).join(real);if(o.id===t)o.id=real});saveOutbox()}
+function refreshView(){if(S.v==='home'||S.v==='pick'||(S.v==='customer'&&!S.p.edit))render();else if(S.v==='hist'&&$('#hl'))$('#hl').innerHTML=hrows()}
+async function syncNow(){
+if(syncing||!token||!navigator.onLine)return;
+syncing=true;netUI();const failed=[];let clean=false;
+try{
+while(outbox.length){
+const op=outbox[0];
+try{const r=await api(op.m,op.path,op.b);if(op.temp&&r.id)adopt(op.temp,String(r.id))}
+catch(e){
+if(e.network||e.status===401)throw e;
+if(e.status===409&&op.temp){
+const c=(await api('GET','/customers')).find(x=>x.name.toLowerCase()===op.b.name.toLowerCase());
+if(c){adopt(op.temp,String(c.id));try{await api('POST',`/customers/${c.id}/utang`,{amount:op.b.amount,date:op.b.date,dueAt:op.b.dueAt,note:op.b.note,clientId:op.b.clientId})}catch(e2){if(e2.network||e2.status===401)throw e2;failed.push(e2.message)}}
+else failed.push(e.message)
+}else failed.push(e.message)
+}
+outbox.shift();saveOutbox();netUI()
+}
+await load();
+[S.p,...hist.map(h=>h.p)].forEach(p=>{if(p&&idMap[p.id])p.id=idMap[p.id]});
+refreshView();clean=true
+}catch(e){}
+finally{syncing=false;netUI()}
+if(failed.length)ok('Some changes could not be saved: '+[...new Set(failed)].join(' '));
+if(clean&&outbox.length)setTimeout(syncNow,300)}
+try{token=localStorage.getItem('tk')}catch(e){}
+const sess=t=>{token=t;try{t?localStorage.setItem('tk',t):localStorage.removeItem('tk')}catch(e){}};
 const toLocal=v=>{const d=new Date(v);return new Date(d-d.getTimezoneOffset()*6e4).toISOString().slice(0,16)};
 const iso=v=>{const d=new Date(v);return isNaN(d)?'':d.toISOString()};
 const run=f=>f().catch(e=>ok(e.message));
@@ -74,14 +111,14 @@ async function pushState(){try{if(!('serviceWorker' in navigator)||!('PushManage
 async function syncSw(){const st=await pushState();setN(st);const b=$('#nsw'),t=$('#nsub');if(!b||!t)return;b.setAttribute('aria-checked',st==='on');t.textContent={on:'ON: alerts come to this device, even when the app is closed.',off:'OFF: no due-date alerts on this device.',blocked:'Blocked in your browser settings. Allow notifications for this site, then try again.',unsupported:'This browser cannot receive notifications. On iPhone, add the app to the Home Screen first.'}[st]}
 const fmtPh=s=>s.replace(/^(\d{4})(\d{3})(\d{4})$/,'$1 $2 $3');
 const lp=()=>{try{return localStorage.getItem('lp')||''}catch(e){return''}};
-async function api(m,p,b){let r;try{r=await fetch('/api'+p,{method:m,headers:{'Content-Type':'application/json',...(token?{Authorization:'Bearer '+token}:{})},body:b?JSON.stringify(b):undefined})}catch(e){throw new Error('Cannot reach the server. Check your connection.')}
+async function api(m,p,b){let r;try{r=await fetch('/api'+p,{method:m,headers:{'Content-Type':'application/json',...(token?{Authorization:'Bearer '+token}:{})},body:b?JSON.stringify(b):undefined})}catch(e){const x=new Error('Cannot reach the server. Check your connection.');x.network=true;throw x}
 const j=await r.json().catch(()=>({}));
 if(r.status===401&&token){sess(null);hist=[];rep('login');throw new Error(j.error||'Session expired. Please log in again.')}
-if(!r.ok)throw new Error(j.error||'Something went wrong.');return j}
+if(!r.ok){const x=new Error(j.error||'Something went wrong.');x.status=r.status;throw x}return j}
 async function load(){const[c,t,m]=await Promise.all([api('GET','/customers'),api('GET','/transactions'),api('GET','/me')]);
 db.customers=c.map(x=>({id:String(x.id),name:x.name,phone:x.phone||'',due:x.due_at?toLocal(x.due_at):null}));
 db.txs=t.reverse().map(x=>({id:x.id,cid:String(x.customer_id),type:x.type=='payment'?'pay':'utang',amt:x.amount,date:x.tx_date,note:x.note||''}));
-db.owner={name:m.name,age:m.age,phone:m.phone,photo:m.photo_url,demo:m.is_demo}}
+db.owner={name:m.name,age:m.age,phone:m.phone,photo:m.photo_url,demo:m.is_demo};let prev=null;try{prev=localStorage.getItem('snapOwner')}catch(e){}if(prev&&prev!==String(m.id)){outbox=[];saveOutbox()}try{localStorage.setItem('snapOwner',String(m.id))}catch(e){}saveSnap()}
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const cap=s=>s.charAt(0).toUpperCase()+s.slice(1);
 const peso=n=>'₱'+Number(n).toLocaleString('en-PH',{maximumFractionDigits:2});
@@ -160,21 +197,44 @@ same:()=>{S.p.other=0;render()},
 signup:()=>run(async()=>{if(g('p1')!==g('p2'))return ok('The PINs do not match.');const r=await api('POST','/auth/signup',{name:g('n'),age:g('a'),phone:g('c'),pin:g('p1'),recovery:g('s')});try{localStorage.setItem('lp',g('c').replace(/\D/g,''))}catch(e){}modal(r.message,[{t:'OK',f:()=>rep('login')}])}),
 verify:()=>run(async()=>{const r=await api('POST','/auth/forgot/verify',{phone:g('c'),recovery:g('s')});resetTok=r.resetToken;rep('resetpin')}),
 resetPin:()=>run(async()=>{if(g('p1')!==g('p2'))return ok('The PINs do not match.');const r=await api('POST','/auth/forgot/reset',{resetToken:resetTok,pin:g('p1')});ok(r.message,()=>{hist=[];rep('login')})}),
-logout:()=>modal('Are you sure you want to log out?',[{t:'Back',p:0},{t:'Yes',f:()=>{sess(null);db={owner:null,customers:[],txs:[]};hist=[];rep('login')}}]),
+logout:()=>modal('Are you sure you want to log out?',[{t:'Back',p:0},{t:'Yes',f:async()=>{if(outbox.length)await syncNow();if(outbox.length)return ok(`You have ${outbox.length} change${outbox.length>1?'s':''} not yet saved online. Connect to the internet, wait for them to sync, then log out.`);sess(null);clearLocal();db={owner:null,customers:[],txs:[]};hist=[];rep('login')}}]),
 editPh(){S.p.edit=1;render()},
-savePh:()=>run(async()=>{const c=cust(S.p.id),du=g('du'),b={name:g('nm'),phone:g('ph')};if(du&&du!==c.due)b.dueAt=iso(du);await api('PUT','/customers/'+c.id,b);await load();S.p.edit=0;render()}),
-del:d=>modal('Delete this customer and all their transactions?',[{t:'Cancel',p:0},{t:'Delete',f:()=>run(async()=>{await api('DELETE','/customers/'+d.id);await load();A.back()})}]),
-saveC:()=>run(async()=>{const r=await api('POST','/customers',{name:g('n'),phone:g('c'),amount:+g('amt'),date:g('d'),dueAt:iso(g('due')),note:g('i')});await load();ok(r.message,()=>rep('customer',{id:String(r.id)}))}),
-saveU:d=>run(async()=>{const r=await api('POST',`/customers/${d.id}/utang`,{amount:+g('amt'),date:g('d'),dueAt:iso(g('due')),note:g('i')});await load();ok(r.message,()=>toCust(d.id))}),
+savePh:()=>{const c=cust(S.p.id),n=g('nm'),ph=g('ph'),du=g('du');
+if(!n)return ok('Please enter the customer’s name.');if(n.length>80)return ok('The name is too long.');
+if(db.customers.some(x=>x.id!==c.id&&x.name.toLowerCase()===n.toLowerCase()))return ok('A customer with this name already exists.');
+const b={name:n,phone:ph};if(du&&du!==c.due){if(!(new Date(du)>new Date()))return ok('Choose a future due date and time.');b.dueAt=iso(du);c.due=du}
+c.name=n;c.phone=ph;S.p.edit=0;render();enq({m:'PUT',path:'/customers/'+c.id,b})},
+del:d=>modal('Delete this customer and all their transactions?',[{t:'Cancel',p:0},{t:'Delete',f:()=>{db.customers=db.customers.filter(c=>c.id!==d.id);db.txs=db.txs.filter(x=>x.cid!==d.id);
+if(d.id.startsWith('t_')){outbox=outbox.filter(o=>o.id!==d.id&&!o.path.includes(d.id));saveOutbox();saveSnap();netUI()}else enq({m:'DELETE',path:'/customers/'+d.id});A.back()}}]),
+saveC:()=>{const name=g('n'),phone=g('c'),note=g('i'),date=g('d'),amt=+g('amt'),due=iso(g('due'));
+if(!name)return ok('Please enter the customer’s name.');if(name.length>80)return ok('The name is too long.');if(phone.length>30)return ok('The contact number is too long.');
+if(db.customers.some(c=>c.name.toLowerCase()===name.toLowerCase()))return ok('A customer with this name already exists.');
+if(!note)return ok('Please enter the list of orders.');if(note.length>200)return ok('The list of orders is too long (200 characters max).');
+if(!date)return ok('Choose a valid date.');if(!(amt>0))return ok('Enter an amount greater than zero.');if(amt>1e6)return ok('Amount is too large.');
+if(!(new Date(due)>new Date()))return ok('Choose a future due date and time.');
+const id=tmp();db.customers.push({id,name,phone,due:toLocal(due)});db.txs.push({id:uid(),cid:id,type:'utang',amt,date,note});
+enq({m:'POST',path:'/customers',b:{name,phone,amount:amt,date,dueAt:due,note,clientId:uid()},temp:id,id});
+ok('Saved information.',()=>rep('customer',{id}))},
+saveU:d=>{const note=g('i'),date=g('d'),amt=+g('amt'),due=iso(g('due'));
+if(!note)return ok('Please enter the list of orders.');if(note.length>200)return ok('The list of orders is too long (200 characters max).');
+if(!date)return ok('Choose a valid date.');if(!(amt>0))return ok('Enter an amount greater than zero.');if(amt>1e6)return ok('Amount is too large.');
+if(!(new Date(due)>new Date()))return ok('Choose a future due date and time.');
+db.txs.push({id:uid(),cid:d.id,type:'utang',amt,date,note});cust(d.id).due=toLocal(due);
+enq({m:'POST',path:`/customers/${d.id}/utang`,b:{amount:amt,date,dueAt:due,note,clientId:uid()}});
+ok('New utang added!',()=>toCust(d.id))},
 full:d=>{$('#amt').value=d.v},
-savePay:d=>run(async()=>{const amt=+g('amt');if(!(amt>0))return ok('Enter an amount greater than zero.');modal(`Are you sure of the amount? ${peso(amt)}`,[{t:'Cancel',p:0},{t:'Yes, proceed',f:()=>run(async()=>{const r=await api('POST',`/customers/${d.id}/payments`,{amount:amt,date:g('d')});await load();ok(r.message,()=>toCust(d.id))})}])}),
-saveP:()=>run(async()=>{const b={name:g('n'),age:g('a'),phone:g('c')};if(newPhoto)b.photo=newPhoto;await api('PUT','/owner',b);newPhoto=null;await load();ok('Profile updated.',A.back)}),
+savePay:d=>{const amt=+g('amt'),date=g('d'),c=cust(d.id),b=bal(d.id);
+if(!(amt>0))return ok('Enter an amount greater than zero.');if(!date)return ok('Choose a valid date.');
+if(Math.round(amt*100)>Math.round(b*100))return ok(`That is more than the pending utang of ${peso(b)}.`);
+modal(`Are you sure of the amount? ${peso(amt)}`,[{t:'Cancel',p:0},{t:'Yes, proceed',f:()=>{db.txs.push({id:uid(),cid:d.id,type:'pay',amt,date,note:''});if(bal(d.id)<=0)c.due=null;enq({m:'POST',path:`/customers/${d.id}/payments`,b:{amount:amt,date,clientId:uid()}});ok('Payment successful!',()=>toCust(d.id))}}])},
+saveP:()=>run(async()=>{const b={name:g('n'),age:g('a'),phone:g('c')};if(newPhoto)b.photo=newPhoto;await api('PUT','/owner',b);if(newPhoto)db.owner.photo=newPhoto;Object.assign(db.owner,{name:b.name,age:+b.age,phone:b.phone.replace(/\D/g,'')});newPhoto=null;saveSnap();ok('Profile updated.',A.back)}),
 savePin:()=>run(async()=>{if(g('p1')!==g('p2'))return ok('The PINs do not match.');const r=await api('PUT','/owner/pin',{current:g('p0'),pin:g('p1')});ok(r.message,A.back)})
 };
 document.addEventListener('click',e=>{const t=e.target.closest('[data-a]');if(t&&A[t.dataset.a]){e.preventDefault();A[t.dataset.a](t.dataset,t)}});
 document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.dataset.e)A[e.target.dataset.e]()});
 document.addEventListener('input',e=>{const i=e.target.id;if(i==='q'){S.p.q=e.target.value;$('#list').innerHTML=rows()}else if(i==='hq')$('#hl').innerHTML=hrows()});
 document.addEventListener('change',e=>{if(e.target.id!=='pf')return;const f=e.target.files[0];if(!f)return;if(!f.type.startsWith('image/'))return ok('Please choose an image file.');const r=new FileReader();r.onload=()=>{const im=new Image();im.onload=()=>{const m=Math.min(im.width,im.height),cv=document.createElement('canvas');cv.width=cv.height=256;cv.getContext('2d').drawImage(im,(im.width-m)/2,(im.height-m)/2,m,m,0,0,256,256);newPhoto=cv.toDataURL('image/jpeg',.8);$('#pv').innerHTML=av(newPhoto)};im.onerror=()=>ok('That image could not be read.');im.src=r.result};r.readAsDataURL(f)});
-render();setTimeout(async()=>{if(token){try{await load();return home()}catch(e){sess(null)}}rep('login')},1000);
+addEventListener('online',()=>{netUI();syncNow()});addEventListener('offline',netUI);setInterval(()=>syncNow(),60000);
+render();netUI();setTimeout(async()=>{if(token){if(loadSnap()){home();syncNow();return}try{await load();return home()}catch(e){if(!e.network)sess(null)}}rep('login')},1000);
 if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWorker.register('/sw.js').catch(()=>{}));
 </script></body></html>

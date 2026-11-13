@@ -40,3 +40,4 @@ CREATE TABLE push_subscriptions (
   auth TEXT NOT NULL,
   created_at TIMESTAMPTZ DEFAULT now()
 );
+ALTER TABLE transactions ADD COLUMN IF NOT EXISTS client_id TEXT UNIQUE;
