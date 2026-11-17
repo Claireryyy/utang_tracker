@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="en"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>Sari-Sari Store Utang Tracker</title>
 <link rel="manifest" href="/manifest.json">
 <meta name="theme-color" content="#0b6e5f">
@@ -16,7 +16,7 @@
 :root[data-theme="dark"]{--bg:#0e1b19;--card:#172927;--ink:#e8f3f0;--mut:#93aca6;--pri:#3cc2a8;--onpri:#06231e;--yel:#ffc933;--red:#ff7b74;--ok:#5fd18c;--bd:#27403c;--tint:#1c312e;color-scheme:dark}
 *,*:before,*:after{box-sizing:inherit}
 html,body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif}
-#app{max-width:480px;margin:0 auto;min-height:100vh;background:var(--bg);padding-bottom:64px}
+html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}html{background:var(--bd)}body{background:transparent}#app{box-shadow:0 0 24px rgba(0,0,0,.12);max-width:480px;margin:0 auto;min-height:100vh;background:var(--bg);padding-bottom:64px}
 h1,h2,h3,.big{font-family:"Baloo 2",system-ui,sans-serif;margin:0;line-height:1.15}
 header{display:flex;align-items:center;gap:8px;padding:12px 14px;background:var(--pri);color:var(--onpri)}
 header h1{font-size:20px;font-weight:700}
@@ -43,7 +43,7 @@ input:focus,select:focus,button:focus-visible,a:focus-visible{outline:3px solid 
 .who b{font:700 22px "Baloo 2",sans-serif}.who small{color:var(--mut);display:block}.who .ib{margin-left:auto;background:var(--tint);color:var(--ink)}
 .cur{background:var(--card);border:2px solid var(--bd);border-radius:16px;padding:14px 16px;display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
 .cur .big{font-size:34px;font-weight:700}
-.pill{padding:3px 12px;border-radius:99px;font-size:13px;font-weight:700}.pill.p{background:var(--yel);color:#3a2d00}.pill.ok{background:var(--ok);color:#fff}.pill.od{background:var(--red);color:#fff}.due{margin:0 0 10px;color:var(--mut)}.due.od{color:var(--red)}.alert{background:var(--card);border:2px solid var(--red);border-radius:14px;padding:10px 12px;margin-bottom:14px}.alert>b{display:block;color:var(--red);margin-bottom:8px}.alert .row{margin-bottom:6px}.pw{position:relative;display:block}#net{position:fixed;left:0;right:0;bottom:0;z-index:15;text-align:center;padding:8px 12px calc(8px + env(safe-area-inset-bottom,0px));font-size:14px;font-weight:600;background:#3a2d00;color:#ffc933}#net[hidden]{display:none}.pw input{padding-right:66px}input[type="password"]::-ms-reveal{display:none}
+.pill{padding:3px 12px;border-radius:99px;font-size:13px;font-weight:700}.pill.p{background:var(--yel);color:#3a2d00}.pill.ok{background:var(--ok);color:#fff}.pill.od{background:var(--red);color:#fff}.due{margin:0 0 10px;color:var(--mut)}.due.od{color:var(--red)}.alert{background:var(--card);border:2px solid var(--red);border-radius:14px;padding:10px 12px;margin-bottom:14px}.alert>b{display:block;color:var(--red);margin-bottom:8px}.alert .row{margin-bottom:6px}.pw{position:relative;display:block}#net{position:fixed;left:50%;transform:translateX(-50%);width:100%;max-width:480px;bottom:0;z-index:15;text-align:center;padding:8px 12px calc(8px + env(safe-area-inset-bottom,0px));font-size:14px;font-weight:600;background:#3a2d00;color:#ffc933}#net[hidden]{display:none}.pw input{padding-right:66px}input[type="password"]::-ms-reveal{display:none}
 .eye{position:absolute;right:4px;bottom:5px;border:0;background:none;color:var(--pri);font:700 14px system-ui,sans-serif;padding:8px;cursor:pointer}
 .sum{background:var(--card);border-radius:12px;padding:4px 14px;margin-bottom:10px}.sum div{display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--bd)}.sum div:last-child{border:0}
 .tx{display:flex;justify-content:space-between;gap:10px;padding:10px 2px;border-bottom:1px solid var(--bd)}.tx small{color:var(--mut);display:block}
@@ -233,6 +233,9 @@ document.addEventListener('click',e=>{const t=e.target.closest('[data-a]');if(t&
 document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.dataset.e)A[e.target.dataset.e]()});
 document.addEventListener('input',e=>{const i=e.target.id;if(i==='q'){S.p.q=e.target.value;$('#list').innerHTML=rows()}else if(i==='hq')$('#hl').innerHTML=hrows()});
 document.addEventListener('change',e=>{if(e.target.id!=='pf')return;const f=e.target.files[0];if(!f)return;if(!f.type.startsWith('image/'))return ok('Please choose an image file.');const r=new FileReader();r.onload=()=>{const im=new Image();im.onload=()=>{const m=Math.min(im.width,im.height),cv=document.createElement('canvas');cv.width=cv.height=256;cv.getContext('2d').drawImage(im,(im.width-m)/2,(im.height-m)/2,m,m,0,0,256,256);newPhoto=cv.toDataURL('image/jpeg',.8);$('#pv').innerHTML=av(newPhoto)};im.onerror=()=>ok('That image could not be read.');im.src=r.result};r.readAsDataURL(f)});
+['gesturestart','gesturechange','gestureend'].forEach(t=>document.addEventListener(t,e=>e.preventDefault()));
+addEventListener('wheel',e=>{if(e.ctrlKey)e.preventDefault()},{passive:false});
+addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&['+','-','=','_','0'].includes(e.key))e.preventDefault()});
 addEventListener('online',()=>{netUI();syncNow()});addEventListener('offline',netUI);setInterval(()=>syncNow(),60000);
 render();netUI();setTimeout(async()=>{if(token){if(loadSnap()){home();syncNow();return}try{await load();return home()}catch(e){if(!e.network)sess(null)}}rep('login')},1000);
 if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWorker.register('/sw.js').catch(()=>{}));
