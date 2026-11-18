@@ -220,5 +220,5 @@ router.post('/:id/payments', demoCap, async (req, res) => {
   });
   send(res, out);
 });
- 
+
 module.exports = router;
